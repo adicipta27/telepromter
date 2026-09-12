@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SyncPrompt Pro - Teleprompter Realtime</title>
+  <title>SyncPrompt Pro - Teleprompter Realtime Firebase</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -40,19 +40,19 @@
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
     <div class="flex items-center gap-3">
       <div class="bg-blue-600 p-2 rounded-lg text-white font-bold">
-        <i class="fa-solid fa-video"></i>
+        <i class="fa-solid fa-cloud-arrow-up"></i>
       </div>
       <div>
-        <h1 class="font-bold text-lg leading-none text-white">SyncPrompt <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">Realtime</span></h1>
-        <p class="text-xs text-slate-400 mt-0.5">Auto-Save & Realtime Sync</p>
+        <h1 class="font-bold text-lg leading-none text-white">SyncPrompt <span class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">Firebase Cloud</span></h1>
+        <p class="text-xs text-slate-400 mt-0.5">Cloud Auto-Save & Realtime Sync</p>
       </div>
     </div>
 
     <div class="flex items-center gap-3">
-      <!-- Status Koneksi -->
+      <!-- Status Sync Firebase -->
       <div id="connectionStatus" class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs text-emerald-400">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="statusText">Terhubung</span>
+        <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="statusText">Terhubung ke Cloud</span>
       </div>
 
       <!-- Mode Selector -->
@@ -87,11 +87,11 @@
         </button>
       </div>
 
-      <!-- EDIT NASKAH LANGSUNG (AUTO-SAVE LOKAL & FIREBASE) -->
+      <!-- EDIT NASKAH (AUTO SAVE KE FIREBASE) -->
       <div class="space-y-1.5 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
         <div class="flex justify-between items-center text-xs">
-          <span class="text-slate-300 font-semibold"><i class="fa-solid fa-pen-to-square text-blue-400 mr-1"></i> Edit Naskah</span>
-          <span id="saveStatus" class="text-[10px] text-emerald-400 font-medium">Tersimpan</span>
+          <span class="text-slate-300 font-semibold"><i class="fa-solid fa-pen-to-square text-blue-400 mr-1"></i> Edit Naskah (Cloud)</span>
+          <span id="saveStatus" class="text-[10px] text-emerald-400 font-medium"><i class="fa-solid fa-cloud-check mr-1"></i>Tersimpan di Cloud</span>
         </div>
         <textarea id="directScriptEditor" rows="6" oninput="handleDirectTextChange(this.value)" placeholder="Ketik atau paste naskah di sini..." class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500 leading-relaxed resize-none"></textarea>
       </div>
@@ -149,7 +149,7 @@
       <!-- DATABASE BUTTON -->
       <div class="border-t border-slate-800 pt-3 mt-auto">
         <button onclick="openScriptModal()" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-folder-open"></i> Kelola Naskah Database
+          <i class="fa-solid fa-folder-open"></i> Kelola Naskah Tersimpan
         </button>
       </div>
 
@@ -158,7 +158,10 @@
     <!-- TEXT DISPLAY AREA -->
     <main id="teleprompterContainer" onscroll="handleManualScroll()" class="flex-1 overflow-y-auto px-6 py-20 relative">
       <div id="prompterContent" class="max-w-4xl mx-auto space-y-8 text-slate-100 font-medium pb-96">
-        <!-- Teks di-render di sini -->
+        <div class="text-center py-20 text-slate-500">
+          <i class="fa-solid fa-spinner animate-spin text-2xl mb-2 text-blue-500"></i>
+          <p class="text-xs">Memuat data dari Firebase Realtime Cloud...</p>
+        </div>
       </div>
     </main>
 
@@ -169,7 +172,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
       <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
         <h3 class="font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-database text-blue-500"></i> Simpan ke Database Firebase
+          <i class="fa-solid fa-database text-blue-500"></i> Simpan Ke Koleksi Cloud
         </h3>
         <button onclick="closeScriptModal()" class="text-slate-400 hover:text-white p-1">
           <i class="fa-solid fa-xmark text-lg"></i>
@@ -178,9 +181,9 @@
       <div class="p-6 overflow-y-auto space-y-6 flex-1">
         <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
           <h4 class="text-xs font-semibold text-blue-400 uppercase tracking-wider">Simpan Naskah Saat Ini</h4>
-          <input type="text" id="scriptTitle" placeholder="Judul Naskah (contoh: Skrip Video Part 1)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
+          <input type="text" id="scriptTitle" placeholder="Judul Naskah (contoh: Skrip Youtube Part 1)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
           <button onclick="saveScript()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5">
-            <i class="fa-solid fa-floppy-disk"></i> Simpan Naskah
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Ke Database
           </button>
         </div>
         <div>
@@ -214,17 +217,14 @@
     const stateRef = ref(db, 'teleprompter/state');
     const scriptsRef = ref(db, 'teleprompter/scripts');
 
-    const LOCAL_STORAGE_KEY = 'syncprompt_local_state_v2';
-
     let currentMode = 'controller';
     let animFrameId = null;
     let lastSyncTime = 0;
     let debounceTimer = null;
-    let isUserScrolling = false;
+    let isInitialized = false;
 
-    // DATA DEFAULT & CEK MEMORI LOKAL TERLEBIH DAHULU
-    const savedLocal = localStorage.getItem(LOCAL_STORAGE_KEY);
-    let localState = savedLocal ? JSON.parse(savedLocal) : {
+    // STATE DEFAULT HANYA DIGUNAKAN JIKA FIREBASE KOSONG PERTAMA KALI
+    let appState = {
       isPlaying: false,
       speed: 3,
       fontSize: 42,
@@ -233,11 +233,11 @@
       showFocusLine: true,
       isOled: true,
       scrollProgress: 0,
-      text: `Selamat datang di SyncPrompt Pro!
+      text: `Selamat datang di SyncPrompt Pro Cloud!
 
-Ketik atau paste naskah kamu di kotak "Edit Naskah" sebelah kiri.
+Ketik atau tambahkan naskah kamu di kolom "Edit Naskah".
 
-Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
+Setiap perubahan karakter teks, kecepatan, dan scroll posisi akan langsung otomatis terhubung antara PC dan HP secara Real-Time lewat Cloud.`
     };
 
     const teleprompterContainer = document.getElementById('teleprompterContainer');
@@ -247,92 +247,70 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
     const directScriptEditor = document.getElementById('directScriptEditor');
     const saveStatus = document.getElementById('saveStatus');
 
-    // INITIAL RENDER
-    renderText(localState.text);
-    directScriptEditor.value = localState.text;
-    updateUIFromState();
-
-    // SINKRONISASI REALTIME FIREBASE
+    // MENDENGARKAN PERUBAHAN DATA DARI FIREBASE (SINGLE SOURCE OF TRUTH)
     onValue(stateRef, (snapshot) => {
       const data = snapshot.val();
+
+      // Jika Firebase benar-benar kosong pertama kali buat database
       if (!data) {
-        syncAllToFirebase();
+        set(stateRef, appState);
         return;
       }
 
-      // Update Teks jika ada perubahan dari remote
-      if (data.text !== undefined && data.text !== localState.text) {
-        localState.text = data.text;
-        renderText(localState.text);
-        if (document.activeElement !== directScriptEditor) {
-          directScriptEditor.value = localState.text;
-        }
-        saveLocal();
+      // Gabungkan data dari Firebase
+      appState = { ...appState, ...data };
+
+      // Render teks & editor hanya jika berubah
+      renderText(appState.text);
+      if (document.activeElement !== directScriptEditor) {
+        directScriptEditor.value = appState.text;
       }
 
-      // Update Pengaturan Tampilan
-      if (data.speed !== undefined) localState.speed = data.speed;
-      if (data.fontSize !== undefined) localState.fontSize = data.fontSize;
-      if (data.lineHeight !== undefined) localState.lineHeight = data.lineHeight;
-      if (data.isMirror !== undefined) localState.isMirror = data.isMirror;
-      if (data.showFocusLine !== undefined) localState.showFocusLine = data.showFocusLine;
-      if (data.isOled !== undefined) localState.isOled = data.isOled;
-
-      // Status Play/Pause
-      if (data.isPlaying !== undefined && data.isPlaying !== localState.isPlaying) {
-        localState.isPlaying = data.isPlaying;
-        if (localState.isPlaying) startScrollLoop();
-        else stopScrollLoop();
+      // Update Play/Pause status
+      if (appState.isPlaying) {
+        if (currentMode === 'controller') startScrollLoop();
+      } else {
+        stopScrollLoop();
       }
 
-      // Sync Scroll khusus HP (Reader Mode)
-      if (currentMode === 'reader' && data.scrollProgress !== undefined) {
+      // Update Scroll khusus untuk HP (Reader Mode)
+      if (currentMode === 'reader' && appState.scrollProgress !== undefined) {
         const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
         if (maxScroll > 0) {
-          teleprompterContainer.scrollTop = data.scrollProgress * maxScroll;
+          teleprompterContainer.scrollTop = appState.scrollProgress * maxScroll;
         }
       }
 
       updateUIFromState();
-      saveLocal();
+      isInitialized = true;
     });
 
     onValue(scriptsRef, (snapshot) => {
       renderScriptList(snapshot.val());
     });
 
-    // SISTEM AUTO-SAVE LOKAL
-    function saveLocal() {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localState));
-      } catch (e) {}
-    }
-
-    function syncAllToFirebase() {
-      set(stateRef, localState);
-    }
-
+    // KIRIM KOORDINAT SCROLL KE FIREBASE DENGAN THROTTLE (15 FPS)
     function syncScrollThrottled(progress) {
       const now = Date.now();
-      if (now - lastSyncTime > 80) { // Kirim data scroll maksimal 12x / detik
+      if (now - lastSyncTime > 60) {
         lastSyncTime = now;
         update(stateRef, { 
           scrollProgress: progress,
-          isPlaying: localState.isPlaying 
+          isPlaying: appState.isPlaying 
         });
       }
     }
 
-    // ANIMASI AUTO-SCROLL HALUS (PC CONTROLLER)
+    // ANIMASI AUTO-SCROLL UNTUK PC CONTROLLER
     function startScrollLoop() {
       stopScrollLoop();
       function loop() {
-        if (currentMode === 'controller' && localState.isPlaying) {
+        if (currentMode === 'controller' && appState.isPlaying) {
           const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
           if (maxScroll > 0) {
-            teleprompterContainer.scrollTop += (localState.speed * 0.7);
+            teleprompterContainer.scrollTop += (appState.speed * 0.7);
             const progress = teleprompterContainer.scrollTop / maxScroll;
-            localState.scrollProgress = progress;
+            appState.scrollProgress = progress;
             syncScrollThrottled(progress);
           }
           animFrameId = requestAnimationFrame(loop);
@@ -357,7 +335,7 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
         btnController.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-blue-600 text-white shadow";
         btnReader.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white";
         sidebarControls.classList.remove('hidden');
-        if (localState.isPlaying) startScrollLoop();
+        if (appState.isPlaying) startScrollLoop();
       } else {
         btnReader.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-blue-600 text-white shadow";
         btnController.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white";
@@ -367,6 +345,7 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
     };
 
     function renderText(text) {
+      if (!text) return;
       const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
       prompterContent.innerHTML = paragraphs.map((p, idx) => `
         <p onclick="jumpToParagraph(${idx})" class="cursor-pointer hover:text-blue-300 transition duration-150 rounded-lg p-2 hover:bg-slate-900/40">
@@ -377,113 +356,107 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
     }
 
     function applyStyles() {
-      prompterContent.style.fontSize = `${localState.fontSize}px`;
-      prompterContent.style.lineHeight = localState.lineHeight;
+      prompterContent.style.fontSize = `${appState.fontSize}px`;
+      prompterContent.style.lineHeight = appState.lineHeight;
 
-      if (localState.isMirror) prompterContent.classList.add('mirror-mode');
+      if (appState.isMirror) prompterContent.classList.add('mirror-mode');
       else prompterContent.classList.remove('mirror-mode');
 
-      if (localState.showFocusLine) focusLine.classList.remove('hidden');
+      if (appState.showFocusLine) focusLine.classList.remove('hidden');
       else focusLine.classList.add('hidden');
 
-      if (localState.isOled) document.body.classList.add('oled-bg');
+      if (appState.isOled) document.body.classList.add('oled-bg');
       else document.body.classList.remove('oled-bg');
     }
 
     function updateUIFromState() {
-      document.getElementById('playText').innerText = localState.isPlaying ? "PAUSE" : "MULAI SCROLL";
-      document.getElementById('playIcon').className = localState.isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
-      document.getElementById('speedVal').innerText = `${localState.speed}x`;
-      document.getElementById('inputSpeed').value = localState.speed;
-      document.getElementById('fontSizeVal').innerText = `${localState.fontSize}px`;
-      document.getElementById('inputFontSize').value = localState.fontSize;
-      document.getElementById('lineHeightVal').innerText = localState.lineHeight;
-      document.getElementById('inputLineHeight').value = localState.lineHeight;
-      document.getElementById('checkMirror').checked = localState.isMirror;
-      document.getElementById('checkFocusLine').checked = localState.showFocusLine;
-      document.getElementById('checkOled').checked = localState.isOled;
+      document.getElementById('playText').innerText = appState.isPlaying ? "PAUSE" : "MULAI SCROLL";
+      document.getElementById('playIcon').className = appState.isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+      document.getElementById('speedVal').innerText = `${appState.speed}x`;
+      document.getElementById('inputSpeed').value = appState.speed;
+      document.getElementById('fontSizeVal').innerText = `${appState.fontSize}px`;
+      document.getElementById('inputFontSize').value = appState.fontSize;
+      document.getElementById('lineHeightVal').innerText = appState.lineHeight;
+      document.getElementById('inputLineHeight').value = appState.lineHeight;
+      document.getElementById('checkMirror').checked = appState.isMirror;
+      document.getElementById('checkFocusLine').checked = appState.showFocusLine;
+      document.getElementById('checkOled').checked = appState.isOled;
 
       applyStyles();
     }
 
+    // AUTO-SAVE SETIAP KETIK TULISAN KE FIREBASE (DEBOUNCE 300MS)
     window.handleDirectTextChange = function(val) {
-      localState.text = val;
+      appState.text = val;
       renderText(val);
-      saveLocal();
-      saveStatus.innerText = "Menyimpan...";
+
+      saveStatus.innerHTML = `<i class="fa-solid fa-rotate animate-spin mr-1"></i>Menyimpan...`;
       saveStatus.className = "text-[10px] text-amber-400 font-medium";
 
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        update(stateRef, { text: val, scrollProgress: 0 });
-        saveStatus.innerText = "Tersimpan";
-        saveStatus.className = "text-[10px] text-emerald-400 font-medium";
-      }, 400);
+        update(stateRef, { text: val, scrollProgress: 0 }).then(() => {
+          saveStatus.innerHTML = `<i class="fa-solid fa-cloud-check mr-1"></i>Tersimpan di Cloud`;
+          saveStatus.className = "text-[10px] text-emerald-400 font-medium";
+        });
+      }, 300);
     };
 
     window.togglePlay = function() {
-      localState.isPlaying = !localState.isPlaying;
-      saveLocal();
+      appState.isPlaying = !appState.isPlaying;
       updateUIFromState();
       
-      if (localState.isPlaying) startScrollLoop();
+      if (appState.isPlaying) startScrollLoop();
       else stopScrollLoop();
 
-      update(stateRef, { isPlaying: localState.isPlaying });
+      update(stateRef, { isPlaying: appState.isPlaying });
     };
 
     window.resetScroll = function() {
-      localState.isPlaying = false;
+      appState.isPlaying = false;
       stopScrollLoop();
       teleprompterContainer.scrollTop = 0;
-      localState.scrollProgress = 0;
-      saveLocal();
+      appState.scrollProgress = 0;
       updateUIFromState();
       update(stateRef, { scrollProgress: 0, isPlaying: false });
     };
 
     window.updateSpeed = function(val) {
-      localState.speed = parseInt(val);
+      appState.speed = parseInt(val);
       document.getElementById('speedVal').innerText = `${val}x`;
-      saveLocal();
-      update(stateRef, { speed: localState.speed });
+      update(stateRef, { speed: appState.speed });
     };
 
     window.updateFontSize = function(val) {
-      localState.fontSize = parseInt(val);
+      appState.fontSize = parseInt(val);
       document.getElementById('fontSizeVal').innerText = `${val}px`;
       applyStyles();
-      saveLocal();
-      update(stateRef, { fontSize: localState.fontSize });
+      update(stateRef, { fontSize: appState.fontSize });
     };
 
     window.updateLineHeight = function(val) {
-      localState.lineHeight = parseFloat(val);
+      appState.lineHeight = parseFloat(val);
       document.getElementById('lineHeightVal').innerText = val;
       applyStyles();
-      saveLocal();
-      update(stateRef, { lineHeight: localState.lineHeight });
+      update(stateRef, { lineHeight: appState.lineHeight });
     };
 
     window.toggleMirror = function(checked) {
-      localState.isMirror = checked;
+      appState.isMirror = checked;
       applyStyles();
-      saveLocal();
-      update(stateRef, { isMirror: localState.isMirror });
+      update(stateRef, { isMirror: appState.isMirror });
     };
 
     window.toggleFocusLine = function(checked) {
-      localState.showFocusLine = checked;
+      appState.showFocusLine = checked;
       applyStyles();
-      saveLocal();
-      update(stateRef, { showFocusLine: localState.showFocusLine });
+      update(stateRef, { showFocusLine: appState.showFocusLine });
     };
 
     window.toggleOled = function(checked) {
-      localState.isOled = checked;
+      appState.isOled = checked;
       applyStyles();
-      saveLocal();
-      update(stateRef, { isOled: localState.isOled });
+      update(stateRef, { isOled: appState.isOled });
     };
 
     window.jumpToParagraph = function(index) {
@@ -495,13 +468,13 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
     };
 
     window.handleManualScroll = function() {
-      if (currentMode !== 'controller' || localState.isPlaying) return;
+      if (currentMode !== 'controller' || appState.isPlaying) return;
 
       const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
       if (maxScroll <= 0) return;
       
       const progress = teleprompterContainer.scrollTop / maxScroll;
-      localState.scrollProgress = progress;
+      appState.scrollProgress = progress;
       syncScrollThrottled(progress);
     };
 
@@ -522,7 +495,7 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
 
       push(scriptsRef, {
         title: title,
-        body: localState.text,
+        body: appState.text,
         createdAt: Date.now()
       }).then(() => {
         document.getElementById('scriptTitle').value = '';
@@ -533,7 +506,7 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
     function renderScriptList(scripts) {
       const scriptListEl = document.getElementById('scriptList');
       if (!scripts) {
-        scriptListEl.innerHTML = `<p class="text-xs text-slate-500 italic">Belum ada naskah tersimpan.</p>`;
+        scriptListEl.innerHTML = `<p class="text-xs text-slate-500 italic">Belum ada naskah tersimpan di database.</p>`;
         return;
       }
 
@@ -548,7 +521,7 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <button onclick="useScript('${key}')" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold rounded-lg transition">
-                Muat Teks
+                Gunakan Naskah Ini
               </button>
               <button onclick="deleteScript('${key}')" class="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition">
                 <i class="fa-solid fa-trash text-xs"></i>
@@ -562,17 +535,16 @@ Naskah ini akan tersimpan otomatis dan tersinkron secara real-time ke HP kamu.`
       window.useScript = function(key) {
         const selected = scripts[key];
         if (selected) {
-          localState.text = selected.body;
+          appState.text = selected.body;
           renderText(selected.body);
           directScriptEditor.value = selected.body;
-          saveLocal();
           update(stateRef, { text: selected.body, scrollProgress: 0 });
           closeScriptModal();
         }
       };
 
       window.deleteScript = function(key) {
-        if (confirm('Yakin ingin menghapus naskah ini?')) {
+        if (confirm('Yakin ingin menghapus naskah ini dari database cloud?')) {
           remove(ref(db, `teleprompter/scripts/${key}`));
         }
       };
