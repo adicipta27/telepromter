@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SyncPrompt Pro - Teleprompter Realtime</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,7 +11,6 @@
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
     
     .mirror-mode {
       transform: scaleX(-1);
@@ -33,6 +32,12 @@
       pointer-events: none;
       z-index: 20;
     }
+
+    /* iOS Safari Compatibility Fixes */
+    #teleprompterContainer {
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased">
@@ -45,7 +50,7 @@
       </div>
       <div>
         <h1 class="font-bold text-lg leading-none text-white">SyncPrompt <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">Realtime</span></h1>
-        <p class="text-xs text-slate-400 mt-0.5">Auto-Sync PC & HP (Direct Single Channel)</p>
+        <p class="text-xs text-slate-400 mt-0.5">Auto-Sync PC & iPhone</p>
       </div>
     </div>
 
@@ -53,7 +58,7 @@
       <!-- Status Koneksi -->
       <div id="connectionStatus" class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs text-emerald-400">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>Terhubung Realtime</span>
+        <span id="statusText">Terhubung</span>
       </div>
 
       <!-- Mode Selector -->
@@ -156,10 +161,10 @@
 
     </aside>
 
-    <!-- TEXT DISPLAY AREA -->
-    <main id="teleprompterContainer" onscroll="handleScroll()" class="flex-1 overflow-y-auto px-6 py-20 transition-all duration-200 scroll-smooth relative">
-      <div id="prompterContent" class="max-w-4xl mx-auto space-y-8 text-slate-100 font-medium">
-        <!-- Paragraf naskah di-render secara otomatis via JavaScript -->
+    <!-- TEXT DISPLAY AREA (Dihapus scroll-smooth agar responsif di iOS) -->
+    <main id="teleprompterContainer" onscroll="handleScroll()" class="flex-1 overflow-y-auto px-6 py-20 relative">
+      <div id="prompterContent" class="max-w-4xl mx-auto space-y-8 text-slate-100 font-medium pb-96">
+        <!-- Paragraf naskah di-render via JavaScript -->
       </div>
     </main>
 
@@ -210,7 +215,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
 
-    // Konfigurasi Firebase Milik Kamu
     const firebaseConfig = {
       apiKey: "AIzaSyBxGLRePwwlYYIj5daP36dp2Fkf4eFFs",
       authDomain: "teleprompter-33fff.firebaseapp.com",
@@ -221,15 +225,12 @@
       appId: "1:944152266253:web:68c3a50e3ec4726bbd3744"
     };
 
-    // Inisialisasi Firebase
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Jalur Database Langsung (Tanpa Room Code)
     const stateRef = ref(db, 'teleprompter/state');
     const scriptsRef = ref(db, 'teleprompter/scripts');
 
-    // Variable State Aplikasi
     let currentMode = 'controller';
     let isRemoteUpdate = false;
     let autoScrollInterval = null;
@@ -255,26 +256,23 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       text: currentScriptText
     };
 
-    // DOM Elements
     const teleprompterContainer = document.getElementById('teleprompterContainer');
     const prompterContent = document.getElementById('prompterContent');
     const focusLine = document.getElementById('focusLine');
     const sidebarControls = document.getElementById('sidebarControls');
 
-    // --- SINKRONISASI REALTIME FIREBASE ---
+    // SINKRONISASI REALTIME FIREBASE
     onValue(stateRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
       isRemoteUpdate = true;
       
-      // Update Naskah Teks
       if (data.text !== undefined && data.text !== localState.text) {
         localState.text = data.text;
         renderText(localState.text);
       }
 
-      // Update Pengaturan Tampilan & Kontrol
       localState.isPlaying = data.isPlaying ?? false;
       localState.speed = data.speed ?? 3;
       localState.fontSize = data.fontSize ?? 42;
@@ -285,30 +283,35 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
 
       updateUIFromState();
 
-      // Sinkronisasi Posisi Scroll
-      if (data.scrollProgress !== undefined && Math.abs(data.scrollProgress - localState.scrollProgress) > 0.005) {
-        localState.scrollProgress = data.scrollProgress;
-        const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
-        teleprompterContainer.scrollTop = localState.scrollProgress * maxScroll;
+      // Sinkronisasi Scroll untuk iOS & PC
+      if (data.scrollProgress !== undefined) {
+        const diff = Math.abs(data.scrollProgress - localState.scrollProgress);
+        if (diff > 0.002) {
+          localState.scrollProgress = data.scrollProgress;
+          const maxScroll = Math.max(1, teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight);
+          
+          // Menggunakan scrollTo langsung agar kompatibel dengan iOS Safari
+          teleprompterContainer.scrollTo({
+            top: localState.scrollProgress * maxScroll,
+            behavior: 'auto'
+          });
+        }
       }
 
-      // Auto-Scroll Play/Pause
       if (localState.isPlaying) {
         startAutoScroll();
       } else {
         stopAutoScroll();
       }
 
-      setTimeout(() => { isRemoteUpdate = false; }, 100);
+      setTimeout(() => { isRemoteUpdate = false; }, 150);
     });
 
-    // Mendengarkan Database Naskah Tersimpan
     onValue(scriptsRef, (snapshot) => {
       const scripts = snapshot.val();
       renderScriptList(scripts);
     });
 
-    // --- FUNGSI TAMPILAN & UTILITY ---
     window.switchMode = function(mode) {
       currentMode = mode;
       const btnController = document.getElementById('btnModeController');
@@ -381,7 +384,6 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       });
     }
 
-    // --- KONTROL PENGGUNA ---
     window.togglePlay = function() {
       localState.isPlaying = !localState.isPlaying;
       syncToFirebase({ isPlaying: localState.isPlaying });
@@ -465,7 +467,6 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       }
     }
 
-    // --- DATABASE NASKAH ACTIONS ---
     window.openScriptModal = function() {
       document.getElementById('scriptModal').classList.remove('hidden');
     };
@@ -540,7 +541,6 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       };
     }
 
-    // Inisialisasi awal
     renderText(localState.text);
   </script>
 </body>
