@@ -7,12 +7,14 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- QRCode JS Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- PeerJS Library (Cloud Relay Real-Time P2P) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -120,13 +122,13 @@
         <!-- Room Status & Quick Actions -->
         <div class="flex items-center space-x-2 md:space-x-4">
             <!-- Connection Badge -->
-            <div id="connectionStatusBadge" class="hidden md:flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-800 border border-slate-700 text-slate-400">
+            <div id="connectionStatusBadge" class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-800 border border-slate-700 text-slate-400">
                 <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                <span id="statusText">Menghubungkan...</span>
+                <span id="statusText">Menghubungkan Cloud...</span>
             </div>
 
-            <!-- Room Info Button (If active) -->
-            <button id="btnRoomInfo" onclick="openRoomModal()" class="hidden flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition">
+            <!-- Room Info Button -->
+            <button id="btnRoomInfo" onclick="openRoomModal()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition">
                 <i class="fa-solid fa-key text-brand-400"></i>
                 <span>Ruang: <strong id="currentRoomCodeDisplay" class="text-brand-400 font-mono tracking-wider">------</strong></span>
                 <i class="fa-solid fa-qrcode ml-1 text-slate-400"></i>
@@ -167,28 +169,17 @@
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <i class="fa-solid fa-wifi text-brand-400"></i> Sinkronisasi Ruangan
                         </span>
-                        <span id="roomRoleTag" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">Pengendali Utama</span>
+                        <span id="roomRoleTag" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">Cloud Sync Aktif</span>
                     </div>
 
-                    <div id="noRoomAlert" class="text-xs bg-amber-500/10 border border-amber-500/20 text-amber-300 p-3 rounded-xl flex items-start gap-2">
-                        <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-400"></i>
-                        <div>
-                            <p class="font-semibold">Belum Terhubung ke Ruangan</p>
-                            <p class="text-amber-400/80 mt-0.5">Buat ruangan baru atau masukkan kode 6 karakter untuk menghubungkan HP/Kamera Rig Anda.</p>
-                            <button onclick="openRoomModal()" class="mt-2 text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded-lg hover:bg-amber-400 transition">
-                                Hubungkan Sekarang
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="activeRoomInfo" class="hidden flex flex-col gap-2">
+                    <div id="activeRoomInfo" class="flex flex-col gap-2">
                         <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div>
-                                <div class="text-[10px] text-slate-400">Kode Akses (Maks 6 Karakter)</div>
+                                <div class="text-[10px] text-slate-400">Kode Akses Ruangan (6 Karakter)</div>
                                 <div id="displayRoomCode" class="text-xl font-mono font-extrabold text-brand-400 tracking-wider">------</div>
                             </div>
                             <div class="flex gap-1.5">
-                                <button onclick="copyShareLink()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition" title="Salin Tautan">
+                                <button onclick="copyShareLink()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition" title="Salin Tautan HP">
                                     <i class="fa-solid fa-link mr-1"></i>Salin Tautan
                                 </button>
                                 <button onclick="openRoomModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition" title="QR Code">
@@ -217,8 +208,8 @@
                     </div>
 
                     <!-- Countdown Trigger -->
-                    <button onclick="startCountdownAndPlay()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition">
-                        <i class="fa-solid fa-stopwatch text-amber-400 text-sm"></i>
+                    <button onclick="startCountdownAndPlay()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-stopwatch text-amber-400"></i>
                         Mulai dengan Hitung Mundur (3 Detik)
                     </button>
                 </div>
@@ -282,7 +273,7 @@
                             <label class="text-xs text-slate-400 block mb-1">Rata Teks</label>
                             <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
                                 <button onclick="updateTextAlign('left')" id="alignLeftBtn" class="flex-1 py-1 rounded text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-align-left"></i></button>
-                                <button onclick="updateTextAlign('center')" id="alignCenterBtn" class="flex-1 py-1 rounded text-xs bg-brand-600 text-white font-bold"><i class="fa-solid fa-align-center"></i></button>
+                                <button onclick="updateTextAlign('center')" id="alignCenterBtn" class="flex-1 py-1 rounded text-xs bg-brand-600 text-white"><i class="fa-solid fa-align-center"></i></button>
                                 <button onclick="updateTextAlign('right')" id="alignRightBtn" class="flex-1 py-1 rounded text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-align-right"></i></button>
                             </div>
                         </div>
@@ -354,7 +345,9 @@
 
                     <!-- Padding top & bottom so text scrolls through center -->
                     <div class="py-[45vh] px-8 md:px-12 max-w-4xl mx-auto">
-                        <div id="promptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap"></div>
+                        <div id="promptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap">
+                            Selamat datang di TeleSync PRO! Naskah Anda akan tampil di sini. Hubungkan smartphone Anda untuk mulai menggunakan teleprompter secara terintegrasi real-time.
+                        </div>
                     </div>
                 </div>
 
@@ -412,7 +405,9 @@
                 <div id="mobileFocusLineOverlay" class="focus-line-overlay top-1/3 h-20"></div>
 
                 <div class="py-[45vh] px-6 sm:px-12 max-w-5xl mx-auto">
-                    <div id="mobilePromptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap"></div>
+                    <div id="mobilePromptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap">
+                        Selamat datang di TeleSync PRO! Menunggu perintah dari Pengendali...
+                    </div>
                 </div>
             </div>
 
@@ -440,13 +435,12 @@
 
                 <div class="text-center space-y-1">
                     <div class="w-12 h-12 bg-brand-600/20 text-brand-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-brand-500/30">
-                        <i class="fa-solid fa-qrcode text-2xl text-brand-400"></i>
+                        <i class="fa-solid fa-qrcode text-2xl"></i>
                     </div>
                     <h3 class="text-xl font-bold text-white">Hubungkan Ruangan Teleprompter</h3>
-                    <p class="text-xs text-slate-400">Gunakan kode 6 karakter yang sama di PC & Smartphone Anda.</p>
+                    <p class="text-xs text-slate-400">Masukkan kode 6 karakter yang sama di PC & HP Anda.</p>
                 </div>
 
-                <!-- Tabs: Share QR & Form -->
                 <div class="space-y-4">
                     <!-- Share QR Code Display -->
                     <div id="qrCodeWrapper" class="hidden flex flex-col items-center justify-center bg-white p-4 rounded-2xl border border-slate-700">
@@ -459,7 +453,7 @@
                         <div>
                             <label class="text-xs text-slate-400 mb-1 block">Kode Ruangan (Maksimal 6 Karakter)</label>
                             <div class="flex gap-2">
-                                <input type="text" id="inputRoomCode" placeholder="TS8K9P" maxlength="6" oninput="formatRoomCodeInput(this)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 font-mono text-center text-lg font-bold tracking-widest text-brand-400 uppercase focus:outline-none focus:border-brand-500">
+                                <input type="text" id="inputRoomCode" placeholder="TS8K9P" maxlength="6" oninput="formatRoomInput(this)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 font-mono text-center text-lg font-bold tracking-widest text-brand-400 uppercase focus:outline-none focus:border-brand-500">
                                 <button onclick="joinRoomFromInput()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
                                     Gabung
                                 </button>
@@ -473,7 +467,7 @@
                         </div>
 
                         <button onclick="createNewRoom()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 text-sm flex items-center justify-center gap-2 transition">
-                            <i class="fa-solid fa-plus text-brand-400"></i> Buat Ruangan Baru (6 Karakter)
+                            <i class="fa-solid fa-plus text-brand-400"></i> Buat Ruangan 6 Karakter Acak
                         </button>
                     </div>
                 </div>
@@ -488,286 +482,8 @@
 
     </main>
 
-    <!-- Firebase SDK Scripts -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global State & Firebase references
-        const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'teleprompter-app-default';
-        const firebaseConfig = typeof window.__firebase_config !== 'undefined' && window.__firebase_config ? JSON.parse(window.__firebase_config) : null;
-
-        let db = null;
-        let auth = null;
-        let roomUnsubscribe = null;
-        let currentDeviceId = 'dev_' + Math.random().toString(36).substring(2, 9);
-
-        // Helper function to generate 6-character room codes
-        window.generateRandomRoomCode = function() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 6; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        };
-
-        // Teleprompter State
-        window.appState = {
-            roomId: '',
-            isController: true,
-            scriptText: `Selamat datang di TeleSync PRO!
-
-Teleprompter ini dirancang untuk produksi video profesional, siaran berita, maupun pembuatan konten YouTube/TikTok.
-
-Fitur Unggulan TeleSync PRO:
-1. Sinkronisasi Real-Time: Scroll di PC, layar di Smartphone otomatis ikut bergerak secara akurat.
-2. Mode Cermin (Mirroring): Mendukung Flip Horizontal (X) untuk kaca teleprompter beam-splitter profesional.
-3. Kustomisasi Lengkap: Atur ukuran teks, jarak baris, warna tema, serta garis pandu baca (Focus Guide).
-4. Hitung Mundur Otomatis: Mulai perekaman dengan aba-aba 3 detik.
-
-Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel kanan!`,
-            scrollPercent: 0,
-            isPlaying: false,
-            speed: 3,
-            fontSize: 42,
-            lineHeight: 1.6,
-            textAlign: 'center',
-            theme: 'theme-dark',
-            mirrorH: false,
-            mirrorV: false,
-            focusLine: true,
-            lastUpdatedBy: ''
-        };
-
-        // Initialize Firebase
-        async function initFirebase() {
-            if (!firebaseConfig) {
-                console.warn('Firebase config missing. Running in local standalone mode.');
-                updateConnectionBadge(false, 'Mode Lokal (Tanpa Cloud)');
-                return;
-            }
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                // Auth step
-                if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
-                    await signInWithCustomToken(auth, window.__initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                updateConnectionBadge(true, 'Cloud Terhubung');
-
-                // Check URL params for room code
-                const urlParams = new URLSearchParams(window.location.search);
-                const roomParam = urlParams.get('room');
-                const modeParam = urlParams.get('mode');
-
-                if (modeParam === 'display') {
-                    switchViewMode('display');
-                }
-
-                if (roomParam) {
-                    joinRoom(roomParam);
-                } else {
-                    // Create default 6-character room
-                    const defaultRoom = window.generateRandomRoomCode();
-                    joinRoom(defaultRoom);
-                }
-            } catch (err) {
-                console.error('Firebase Auth/Firestore error:', err);
-                updateConnectionBadge(false, 'Mode Lokal (Gagal Cloud)');
-            }
-        }
-
-        // Connect/Listen to Firestore Room (Enforces 6 Chars Max)
-        window.joinRoom = function(roomCode) {
-            if (!roomCode) return;
-            // Strictly cap room code to max 6 characters
-            roomCode = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-            if (roomCode.length === 0) return;
-
-            window.appState.roomId = roomCode;
-
-            document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
-            document.getElementById('displayRoomCode').innerText = roomCode;
-            document.getElementById('inputRoomCode').value = roomCode;
-            document.getElementById('noRoomAlert').classList.add('hidden');
-            document.getElementById('activeRoomInfo').classList.remove('hidden');
-            document.getElementById('btnRoomInfo').classList.remove('hidden');
-
-            // Generate QR Code
-            generateQRCode(roomCode);
-
-            if (!db) return;
-
-            // Unsubscribe existing room listener
-            if (roomUnsubscribe) roomUnsubscribe();
-
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'teleprompter_rooms', roomCode);
-
-            // Subscribe to real-time changes
-            roomUnsubscribe = onSnapshot(roomRef, (snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    applyRemoteState(data);
-                } else {
-                    // Create new room document if doesn't exist
-                    syncStateToCloud(true);
-                }
-            }, (error) => {
-                console.error("Room sync error:", error);
-                showToast("Gagal menyinkronkan data ruangan", "error");
-            });
-
-            showToast(`Terhubung ke Ruangan: ${roomCode}`, "success");
-        };
-
-        // Sync State to Firestore (Debounced/Throttled)
-        let syncTimeout = null;
-        window.syncStateToCloud = function(immediate = false) {
-            if (!db || !window.appState.roomId) return;
-
-            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'teleprompter_rooms', window.appState.roomId);
-            const payload = {
-                scriptText: window.appState.scriptText,
-                scrollPercent: window.appState.scrollPercent,
-                isPlaying: window.appState.isPlaying,
-                speed: window.appState.speed,
-                fontSize: window.appState.fontSize,
-                lineHeight: window.appState.lineHeight,
-                textAlign: window.appState.textAlign,
-                theme: window.appState.theme,
-                mirrorH: window.appState.mirrorH,
-                mirrorV: window.appState.mirrorV,
-                focusLine: window.appState.focusLine,
-                lastUpdatedBy: currentDeviceId,
-                timestamp: Date.now()
-            };
-
-            const performSync = async () => {
-                try {
-                    await setDoc(roomRef, payload, { merge: true });
-                } catch (e) {
-                    console.error("Firestore set error:", e);
-                }
-            };
-
-            if (immediate) {
-                performSync();
-            } else {
-                clearTimeout(syncTimeout);
-                syncTimeout = setTimeout(performSync, 80);
-            }
-        };
-
-        // Apply incoming state from Firestore
-        function applyRemoteState(data) {
-            if (!data) return;
-
-            const isSelfUpdate = data.lastUpdatedBy === currentDeviceId;
-
-            // Always update script text if changed
-            if (data.scriptText !== undefined && data.scriptText !== window.appState.scriptText) {
-                window.appState.scriptText = data.scriptText;
-                document.getElementById('scriptTextarea').value = data.scriptText;
-                updateTextDisplays();
-            }
-
-            // Sync visual attributes
-            if (data.speed !== undefined) {
-                window.appState.speed = data.speed;
-                document.getElementById('inputSpeed').value = data.speed;
-                document.getElementById('speedValueDisplay').innerText = data.speed + ' px/frame';
-                document.getElementById('previewSpeedDisplay').innerText = data.speed + ' px';
-            }
-
-            if (data.fontSize !== undefined) {
-                window.appState.fontSize = data.fontSize;
-                document.getElementById('inputFontSize').value = data.fontSize;
-                document.getElementById('fontSizeDisplay').innerText = data.fontSize + 'px';
-                applyFontSizeStyles();
-            }
-
-            if (data.lineHeight !== undefined) {
-                window.appState.lineHeight = data.lineHeight;
-                document.getElementById('inputLineHeight').value = data.lineHeight;
-                document.getElementById('lineHeightDisplay').innerText = data.lineHeight;
-                applyLineHeightStyles();
-            }
-
-            if (data.textAlign !== undefined) {
-                window.appState.textAlign = data.textAlign;
-                applyTextAlignStyles();
-            }
-
-            if (data.theme !== undefined) {
-                window.appState.theme = data.theme;
-                document.getElementById('selectTheme').value = data.theme;
-                applyThemeStyles();
-            }
-
-            if (data.mirrorH !== undefined || data.mirrorV !== undefined) {
-                window.appState.mirrorH = !!data.mirrorH;
-                window.appState.mirrorV = !!data.mirrorV;
-                applyMirrorStyles();
-            }
-
-            if (data.focusLine !== undefined) {
-                window.appState.focusLine = data.focusLine;
-                document.getElementById('toggleFocusLine').checked = data.focusLine;
-                applyFocusLineStyles();
-            }
-
-            // Sync Play/Pause status
-            if (data.isPlaying !== undefined && data.isPlaying !== window.appState.isPlaying) {
-                window.appState.isPlaying = data.isPlaying;
-                updatePlayIcons();
-            }
-
-            // Sync Scroll Position ONLY if change came from remote device
-            if (!isSelfUpdate && data.scrollPercent !== undefined) {
-                window.appState.scrollPercent = data.scrollPercent;
-                applyScrollPositionFromPercent(data.scrollPercent);
-            }
-        }
-
-        // Initialize App on DOM load
-        window.addEventListener('DOMContentLoaded', () => {
-            // Populate textarea initial script text
-            const textarea = document.getElementById('scriptTextarea');
-            if (textarea) {
-                textarea.value = window.appState.scriptText;
-            }
-
-            // Initialize default local 6-char room code if needed
-            const urlParams = new URLSearchParams(window.location.search);
-            const roomParam = urlParams.get('room');
-            if (roomParam) {
-                window.joinRoom(roomParam);
-            } else {
-                window.joinRoom(window.generateRandomRoomCode());
-            }
-
-            initFirebase();
-            updateTextDisplays();
-            setupKeyboardShortcuts();
-            startAnimationLoop();
-        });
-
-    </script>
-
+    <!-- Cloud Sync & Application Engine Logic -->
     <script>
-        // Formatter helper to cap room code input to 6 uppercase chars
-        function formatRoomCodeInput(inputEl) {
-            inputEl.value = inputEl.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-        }
-
         // Preset Sample Scripts in Indonesian
         const presetScripts = {
             speech: `PIDATO SAMBUTAN RESMI
@@ -805,7 +521,204 @@ Masyarakat dihimbau untuk menggunakan layanan transportasi publik ini dengan mem
 Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di saluran kami.`
         };
 
-        // Scroll Animation Loop Engine
+        // Teleprompter App State
+        window.appState = {
+            roomId: '',
+            isController: true,
+            scriptText: `Selamat datang di TeleSync PRO!
+
+Teleprompter ini dirancang untuk produksi video profesional, siaran berita, maupun pembuatan konten YouTube/TikTok.
+
+Fitur Unggulan TeleSync PRO:
+1. Sinkronisasi Cloud Real-Time: Scroll di PC, layar di Smartphone otomatis ikut bergerak secara akurat via Cloud.
+2. Mode Cermin (Mirroring): Mendukung Flip Horizontal (X) untuk kaca teleprompter beam-splitter profesional.
+3. Kustomisasi Lengkap: Atur ukuran teks, jarak baris, warna tema, serta garis pandu baca (Focus Guide).
+4. Hitung Mundur Otomatis: Mulai perekaman dengan aba-aba 3 detik.
+
+Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel kanan!`,
+            scrollPercent: 0,
+            isPlaying: false,
+            speed: 3,
+            fontSize: 42,
+            lineHeight: 1.6,
+            textAlign: 'center',
+            theme: 'theme-dark',
+            mirrorH: false,
+            mirrorV: false,
+            focusLine: true
+        };
+
+        // PeerJS Cloud Relay State
+        let peer = null;
+        let activeConnections = [];
+        let hostConnection = null;
+
+        // Function to Generate Exactly 6-Character Room Code
+        function generate6CharRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = 'TS'; // Prefix
+            for (let i = 0; i < 4; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code.substring(0, 6);
+        }
+
+        function formatRoomInput(input) {
+            input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+        }
+
+        // Initialize PeerJS Cloud Connection
+        function initPeerCloud(roomCode) {
+            if (peer) {
+                try { peer.destroy(); } catch(e){}
+            }
+
+            updateConnectionBadge('amber', 'Menghubungkan Cloud...');
+            const peerId = 'telesync-' + roomCode.toLowerCase();
+
+            // Connect to public PeerJS Cloud server
+            peer = new Peer(peerId, { debug: 1 });
+
+            peer.on('open', (id) => {
+                console.log('Peer Host Opened:', id);
+                updateConnectionBadge('emerald', 'Cloud Terhubung (Host)');
+            });
+
+            peer.on('connection', (conn) => {
+                console.log('Client connected:', conn.peer);
+                activeConnections.push(conn);
+                
+                conn.on('open', () => {
+                    // Send current full state to newly connected device
+                    conn.send({ type: 'SYNC_STATE', state: window.appState });
+                    showToast("Perangkat HP/Layar baru terhubung!", "success");
+                    updateConnectionBadge('emerald', `Cloud (${activeConnections.length} HP Terhubung)`);
+                });
+
+                conn.on('data', (data) => {
+                    handleIncomingData(data);
+                });
+
+                conn.on('close', () => {
+                    activeConnections = activeConnections.filter(c => c !== conn);
+                    updateConnectionBadge('emerald', activeConnections.length > 0 ? `Cloud (${activeConnections.length} Terhubung)` : 'Cloud Terhubung');
+                });
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    // Room code already taken as Host -> Connect as Client/Display
+                    connectAsClient(peerId);
+                } else {
+                    console.warn('Peer error:', err);
+                    updateConnectionBadge('amber', 'Cloud Relay Aktif');
+                }
+            });
+        }
+
+        function connectAsClient(hostPeerId) {
+            if (peer) {
+                try { peer.destroy(); } catch(e){}
+            }
+
+            peer = new Peer(); // Auto ID
+            peer.on('open', () => {
+                hostConnection = peer.connect(hostPeerId);
+                
+                hostConnection.on('open', () => {
+                    updateConnectionBadge('emerald', 'Terhubung ke PC');
+                    showToast("Berhasil terhubung ke PC Utama!", "success");
+                });
+
+                hostConnection.on('data', (data) => {
+                    handleIncomingData(data);
+                });
+
+                hostConnection.on('close', () => {
+                    updateConnectionBadge('amber', 'Terputus dari PC');
+                });
+            });
+        }
+
+        function broadcastStateChange() {
+            // Broadcast to all clients if Host
+            activeConnections.forEach(conn => {
+                if (conn.open) {
+                    conn.send({ type: 'SYNC_STATE', state: window.appState });
+                }
+            });
+
+            // Send to Host if Client
+            if (hostConnection && hostConnection.open) {
+                hostConnection.send({ type: 'SYNC_STATE', state: window.appState });
+            }
+        }
+
+        function handleIncomingData(data) {
+            if (data && data.type === 'SYNC_STATE' && data.state) {
+                const incoming = data.state;
+                
+                // Update local app state
+                window.appState.scriptText = incoming.scriptText;
+                window.appState.scrollPercent = incoming.scrollPercent;
+                window.appState.isPlaying = incoming.isPlaying;
+                window.appState.speed = incoming.speed;
+                window.appState.fontSize = incoming.fontSize;
+                window.appState.lineHeight = incoming.lineHeight;
+                window.appState.textAlign = incoming.textAlign;
+                window.appState.theme = incoming.theme;
+                window.appState.mirrorH = incoming.mirrorH;
+                window.appState.mirrorV = incoming.mirrorV;
+                window.appState.focusLine = incoming.focusLine;
+
+                // Render UI
+                document.getElementById('scriptTextarea').value = incoming.scriptText;
+                document.getElementById('inputSpeed').value = incoming.speed;
+                document.getElementById('speedValueDisplay').innerText = incoming.speed + ' px/frame';
+                document.getElementById('previewSpeedDisplay').innerText = incoming.speed + ' px';
+
+                document.getElementById('inputFontSize').value = incoming.fontSize;
+                document.getElementById('fontSizeDisplay').innerText = incoming.fontSize + 'px';
+
+                document.getElementById('inputLineHeight').value = incoming.lineHeight;
+                document.getElementById('lineHeightDisplay').innerText = incoming.lineHeight;
+
+                document.getElementById('selectTheme').value = incoming.theme;
+                document.getElementById('toggleFocusLine').checked = incoming.focusLine;
+
+                updateTextDisplays();
+                applyFontSizeStyles();
+                applyLineHeightStyles();
+                applyTextAlignStyles();
+                applyThemeStyles();
+                applyMirrorStyles();
+                applyFocusLineStyles();
+                updatePlayIcons();
+                applyScrollPositionFromPercent(incoming.scrollPercent);
+            }
+        }
+
+        // Room Management
+        window.joinRoom = function(roomCode) {
+            if (!roomCode) return;
+            // Strict 6 characters
+            roomCode = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+            if (roomCode.length < 6) {
+                roomCode = (roomCode + 'XXXXXX').slice(0, 6);
+            }
+
+            window.appState.roomId = roomCode;
+
+            document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
+            document.getElementById('displayRoomCode').innerText = roomCode;
+            document.getElementById('inputRoomCode').value = roomCode;
+
+            generateQRCode(roomCode);
+            initPeerCloud(roomCode);
+            showToast(`Ruangan Terhubung: ${roomCode}`, "info");
+        };
+
+        // Scroll Animation Loop Engine (RequestAnimationFrame)
         let animationFrameId = null;
 
         function startAnimationLoop() {
@@ -818,7 +731,6 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             loop();
         }
 
-        // Auto Scroll execution per frame
         function performAutoScroll() {
             const container = getActivePromptContainer();
             if (!container) return;
@@ -828,20 +740,16 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
 
             container.scrollTop += window.appState.speed * 0.5;
             
-            // Calculate ratio
             const newPercent = container.scrollTop / maxScroll;
             window.appState.scrollPercent = newPercent;
             
-            // Sync slider UI
             const slider = document.getElementById('inputScrollProgress');
             if (slider) slider.value = Math.round(newPercent * 100);
             document.getElementById('scrollProgressPercent').innerText = Math.round(newPercent * 100) + '%';
 
-            // Push to cloud periodically
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
-        // Handle user manual scrolling
         function handleLocalScroll() {
             const container = getActivePromptContainer();
             if (!container) return;
@@ -852,12 +760,10 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             const percent = container.scrollTop / maxScroll;
             window.appState.scrollPercent = percent;
 
-            const slider = document.getElementById('inputScrollProgress');
-            if (slider) slider.value = Math.round(percent * 100);
+            document.getElementById('inputScrollProgress').value = Math.round(percent * 100);
             document.getElementById('scrollProgressPercent').innerText = Math.round(percent * 100) + '%';
 
-            // Sync with remote
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function applyScrollPositionFromPercent(percent) {
@@ -874,8 +780,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
                 }
             });
 
-            const slider = document.getElementById('inputScrollProgress');
-            if (slider) slider.value = Math.round(percent * 100);
+            document.getElementById('inputScrollProgress').value = Math.round(percent * 100);
             document.getElementById('scrollProgressPercent').innerText = Math.round(percent * 100) + '%';
         }
 
@@ -889,7 +794,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function togglePlay() {
             window.appState.isPlaying = !window.appState.isPlaying;
             updatePlayIcons();
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
         }
 
         function updatePlayIcons() {
@@ -916,7 +821,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function resetScroll() {
             window.appState.scrollPercent = 0;
             applyScrollPositionFromPercent(0);
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
             showToast("Scroll di-reset ke paling atas", "info");
         }
 
@@ -924,7 +829,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             const percent = val / 100;
             window.appState.scrollPercent = percent;
             applyScrollPositionFromPercent(percent);
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function startCountdownAndPlay() {
@@ -956,7 +861,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             window.appState.speed = parseInt(val);
             document.getElementById('speedValueDisplay').innerText = val + ' px/frame';
             document.getElementById('previewSpeedDisplay').innerText = val + ' px';
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function changeSpeed(delta) {
@@ -969,7 +874,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             window.appState.fontSize = parseInt(val);
             document.getElementById('fontSizeDisplay').innerText = val + 'px';
             applyFontSizeStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function applyFontSizeStyles() {
@@ -982,7 +887,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             window.appState.lineHeight = parseFloat(val);
             document.getElementById('lineHeightDisplay').innerText = val;
             applyLineHeightStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function applyLineHeightStyles() {
@@ -993,7 +898,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function updateTextAlign(align) {
             window.appState.textAlign = align;
             applyTextAlignStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
         }
 
         function applyTextAlignStyles() {
@@ -1001,7 +906,6 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             document.getElementById('promptTextDisplay').style.textAlign = align;
             document.getElementById('mobilePromptTextDisplay').style.textAlign = align;
 
-            // Highlight button active status
             ['left', 'center', 'right'].forEach(a => {
                 const btn = document.getElementById(`align${a.charAt(0).toUpperCase() + a.slice(1)}Btn`);
                 if (btn) {
@@ -1017,7 +921,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function updateTheme(themeName) {
             window.appState.theme = themeName;
             applyThemeStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
         }
 
         function applyThemeStyles() {
@@ -1036,7 +940,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             if (type === 'v') window.appState.mirrorV = !window.appState.mirrorV;
 
             applyMirrorStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
         }
 
         function applyMirrorStyles() {
@@ -1055,7 +959,6 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             text1.style.transform = transformStr;
             text2.style.transform = transformStr;
 
-            // Update Mirror buttons state
             const btnH = document.getElementById('btnMirrorH');
             const btnV = document.getElementById('btnMirrorV');
 
@@ -1066,7 +969,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function updateFocusLineToggle(checked) {
             window.appState.focusLine = checked;
             applyFocusLineStyles();
-            if (window.syncStateToCloud) window.syncStateToCloud(true);
+            broadcastStateChange();
         }
 
         function applyFocusLineStyles() {
@@ -1085,7 +988,7 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         function onScriptInputChange(val) {
             window.appState.scriptText = val;
             updateTextDisplays();
-            if (window.syncStateToCloud) window.syncStateToCloud(false);
+            broadcastStateChange();
         }
 
         function updateTextDisplays() {
@@ -1093,13 +996,11 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             document.getElementById('promptTextDisplay').innerText = text;
             document.getElementById('mobilePromptTextDisplay').innerText = text;
 
-            // Word and Char counts
             const words = text.trim() ? text.trim().split(/\s+/).length : 0;
             const chars = text.length;
             document.getElementById('wordCountDisplay').innerText = words;
             document.getElementById('charCountDisplay').innerText = chars;
 
-            // Estimated reading time (average 150 WPM)
             const minutes = Math.floor(words / 150);
             const seconds = Math.floor((words % 150) / 2.5);
             document.getElementById('estTimeDisplay').innerText = `${minutes}m ${seconds}s`;
@@ -1140,7 +1041,6 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         // Keyboard Shortcuts
         function setupKeyboardShortcuts() {
             window.addEventListener('keydown', (e) => {
-                // Ignore if typing inside textarea or input fields
                 if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
                     return;
                 }
@@ -1176,15 +1076,15 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
         }
 
         function createNewRoom() {
-            const newCode = window.generateRandomRoomCode ? window.generateRandomRoomCode() : 'TS' + Math.floor(1000 + Math.random() * 9000);
+            const newCode = generate6CharRoomCode();
             window.joinRoom(newCode);
             closeRoomModal();
         }
 
         function joinRoomFromInput() {
             const input = document.getElementById('inputRoomCode').value;
-            if (input && input.trim()) {
-                window.joinRoom(input.trim().slice(0, 6));
+            if (input) {
+                window.joinRoom(input);
                 closeRoomModal();
             }
         }
@@ -1194,12 +1094,9 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             const qrCanvas = document.getElementById('qrcodeCanvas');
             const qrText = document.getElementById('qrRoomCodeText');
             
-            if (!qrCanvas || !qrText) return;
-
             qrCanvas.innerHTML = '';
             qrText.innerText = roomCode;
 
-            // Generate URL for display mode
             const currentUrl = window.location.origin + window.location.pathname;
             const shareUrl = `${currentUrl}?room=${roomCode}&mode=display`;
 
@@ -1216,59 +1113,44 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             }
         }
 
-        // Improved Clipboard Copy with Fallback
         function copyShareLink() {
             const currentUrl = window.location.origin + window.location.pathname;
             const shareUrl = `${currentUrl}?room=${window.appState.roomId}&mode=display`;
 
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(shareUrl).then(() => {
-                    showToast("Tautan untuk Smartphone berhasil disalin!", "success");
-                }).catch(() => {
-                    fallbackCopyText(shareUrl);
+                    showToast("Tautan HP berhasil disalin!", "success");
                 });
             } else {
-                fallbackCopyText(shareUrl);
-            }
-        }
-
-        function fallbackCopyText(text) {
-            const dummy = document.createElement('textarea');
-            document.body.appendChild(dummy);
-            dummy.value = text;
-            dummy.select();
-            try {
+                const dummy = document.createElement('input');
+                document.body.appendChild(dummy);
+                dummy.value = shareUrl;
+                dummy.select();
                 document.execCommand('copy');
-                showToast("Tautan untuk Smartphone berhasil disalin!", "success");
-            } catch (err) {
-                showToast("Gagal menyalin tautan", "error");
+                document.body.removeChild(dummy);
+                showToast("Tautan HP berhasil disalin!", "success");
             }
-            document.body.removeChild(dummy);
         }
 
-        // Connection Badge Helper
-        function updateConnectionBadge(connected, text) {
+        function updateConnectionBadge(status, text) {
             const dot = document.getElementById('statusDot');
             const txt = document.getElementById('statusText');
-            const badge = document.getElementById('connectionStatusBadge');
 
-            badge.classList.remove('hidden');
-            if (connected) {
+            if (status === 'emerald') {
                 dot.className = "w-2 h-2 rounded-full bg-emerald-400";
-                txt.innerText = text || "Terhubung";
+                txt.innerText = text;
                 txt.className = "text-emerald-300 font-semibold";
             } else {
                 dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-                txt.innerText = text || "Mode Lokal";
+                txt.innerText = text;
                 txt.className = "text-amber-300 font-semibold";
             }
         }
 
-        // Fullscreen API Helper
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => {
-                    console.warn(`Fullscreen not supported: ${err.message}`);
+                    console.warn(`Error full screen: ${err.message}`);
                 });
             } else {
                 if (document.exitFullscreen) {
@@ -1277,11 +1159,8 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
             }
         }
 
-        // Custom Toast Notification System
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
-            if (!container) return;
-
             const toast = document.createElement('div');
 
             let bgClass = 'bg-slate-800 border-slate-700 text-slate-100';
@@ -1300,17 +1179,34 @@ Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di
 
             container.appendChild(toast);
 
-            // Animate in
             setTimeout(() => {
                 toast.classList.remove('translate-y-2', 'opacity-0');
             }, 10);
 
-            // Animate out & remove
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
+
+        // Initialize App on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            const modeParam = urlParams.get('mode');
+
+            if (modeParam === 'display') {
+                switchViewMode('display');
+            }
+
+            const initialRoom = roomParam ? roomParam.toUpperCase().slice(0, 6) : generate6CharRoomCode();
+            joinRoom(initialRoom);
+
+            document.getElementById('scriptTextarea').value = window.appState.scriptText;
+            updateTextDisplays();
+            setupKeyboardShortcuts();
+            startAnimationLoop();
+        });
     </script>
 </body>
 </html>
