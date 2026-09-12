@@ -7,18 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    /* Custom Scrollbar & Utility Classes */
     ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     
-    .mirror-mode {
-      transform: scaleX(-1);
-    }
-    
-    .oled-bg {
-      background-color: #000000 !important;
-    }
+    .mirror-mode { transform: scaleX(-1); }
+    .oled-bg { background-color: #000000 !important; }
 
     .focus-line-indicator {
       position: fixed;
@@ -33,10 +27,10 @@
       z-index: 20;
     }
 
-    /* iOS Safari Compatibility Fixes */
     #teleprompterContainer {
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y;
+      scroll-behavior: auto !important;
     }
   </style>
 </head>
@@ -50,7 +44,7 @@
       </div>
       <div>
         <h1 class="font-bold text-lg leading-none text-white">SyncPrompt <span class="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">Realtime</span></h1>
-        <p class="text-xs text-slate-400 mt-0.5">Auto-Sync PC & iPhone</p>
+        <p class="text-xs text-slate-400 mt-0.5">Auto-Sync PC & Mobile</p>
       </div>
     </div>
 
@@ -80,7 +74,7 @@
     <div id="focusLine" class="focus-line-indicator hidden"></div>
 
     <!-- LEFT SIDEBAR (PC CONTROLLER PANEL) -->
-    <aside id="sidebarControls" class="w-80 bg-slate-900/90 border-r border-slate-800 p-4 flex flex-col gap-5 overflow-y-auto shrink-0">
+    <aside id="sidebarControls" class="w-80 bg-slate-900/90 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
       
       <!-- PLAY / PAUSE & RESET -->
       <div class="space-y-2">
@@ -93,6 +87,14 @@
         </button>
       </div>
 
+      <!-- EDIT NASKAH LANGSUNG (AUTO SAVE) -->
+      <div class="space-y-1.5 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-semibold"><i class="fa-solid fa-pen-to-square text-blue-400 mr-1"></i> Edit Naskah (Auto-Save)</span>
+        </div>
+        <textarea id="directScriptEditor" rows="6" oninput="handleDirectTextChange(this.value)" placeholder="Ketik atau paste naskah di sini..." class="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500 leading-relaxed resize-none"></textarea>
+      </div>
+
       <!-- AUTO SCROLL SPEED -->
       <div class="space-y-2 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
         <div class="flex justify-between items-center text-xs">
@@ -103,8 +105,8 @@
       </div>
 
       <!-- DISPLAY SETTINGS -->
-      <div class="space-y-4 border-t border-slate-800 pt-4">
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-sliders mr-1"></i> Pengaturan Tampilan HP</h3>
+      <div class="space-y-3 border-t border-slate-800 pt-3">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-sliders mr-1"></i> Tampilan Layar HP</h3>
 
         <!-- Font Size -->
         <div class="space-y-1">
@@ -124,47 +126,38 @@
           <input type="range" id="inputLineHeight" min="1.1" max="2.5" step="0.1" value="1.6" oninput="updateLineHeight(this.value)" class="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
         </div>
 
-        <!-- Mirror Mode Toggle -->
-        <div class="flex items-center justify-between p-2.5 bg-slate-950/50 rounded-xl border border-slate-800">
-          <div>
-            <p class="text-xs font-medium text-slate-200">Mode Cermin (Mirror)</p>
-            <p class="text-[10px] text-slate-500">Untuk kaca teleprompter fisik</p>
-          </div>
+        <!-- Mirror Toggle -->
+        <div class="flex items-center justify-between p-2 bg-slate-950/50 rounded-lg border border-slate-800 text-xs">
+          <span class="text-slate-300">Mode Cermin (Mirror)</span>
           <input type="checkbox" id="checkMirror" onchange="toggleMirror(this.checked)" class="w-4 h-4 accent-blue-500 cursor-pointer">
         </div>
 
         <!-- Focus Line Toggle -->
-        <div class="flex items-center justify-between p-2.5 bg-slate-950/50 rounded-xl border border-slate-800">
-          <div>
-            <p class="text-xs font-medium text-slate-200">Garis Pandu Baca</p>
-            <p class="text-[10px] text-slate-500">Highlight area mata pembaca</p>
-          </div>
+        <div class="flex items-center justify-between p-2 bg-slate-950/50 rounded-lg border border-slate-800 text-xs">
+          <span class="text-slate-300">Garis Pandu Baca</span>
           <input type="checkbox" id="checkFocusLine" onchange="toggleFocusLine(this.checked)" checked class="w-4 h-4 accent-blue-500 cursor-pointer">
         </div>
 
-        <!-- OLED Black Toggle -->
-        <div class="flex items-center justify-between p-2.5 bg-slate-950/50 rounded-xl border border-slate-800">
-          <div>
-            <p class="text-xs font-medium text-slate-200">OLED Pitch Black</p>
-            <p class="text-[10px] text-slate-500">Latar hitam pekat studio</p>
-          </div>
+        <!-- OLED Toggle -->
+        <div class="flex items-center justify-between p-2 bg-slate-950/50 rounded-lg border border-slate-800 text-xs">
+          <span class="text-slate-300">OLED Pitch Black</span>
           <input type="checkbox" id="checkOled" onchange="toggleOled(this.checked)" checked class="w-4 h-4 accent-blue-500 cursor-pointer">
         </div>
       </div>
 
       <!-- DATABASE SCRIPT BUTTON -->
-      <div class="border-t border-slate-800 pt-4 space-y-2 mt-auto">
-        <button onclick="openScriptModal()" class="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-folder-open"></i> Database Naskah
+      <div class="border-t border-slate-800 pt-3 mt-auto">
+        <button onclick="openScriptModal()" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-folder-open"></i> Database Kelola Naskah
         </button>
       </div>
 
     </aside>
 
-    <!-- TEXT DISPLAY AREA (Dihapus scroll-smooth agar responsif di iOS) -->
+    <!-- TEXT DISPLAY AREA -->
     <main id="teleprompterContainer" onscroll="handleScroll()" class="flex-1 overflow-y-auto px-6 py-20 relative">
       <div id="prompterContent" class="max-w-4xl mx-auto space-y-8 text-slate-100 font-medium pb-96">
-        <!-- Paragraf naskah di-render via JavaScript -->
+        <!-- Teks akan di-render di sini -->
       </div>
     </main>
 
@@ -173,40 +166,29 @@
   <!-- MODAL DATABASE NASKAH -->
   <div id="scriptModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-      
-      <!-- Modal Header -->
       <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
         <h3 class="font-bold text-white flex items-center gap-2">
-          <i class="fa-solid fa-database text-blue-500"></i> Database Naskah Video
+          <i class="fa-solid fa-database text-blue-500"></i> Simpan ke Database
         </h3>
         <button onclick="closeScriptModal()" class="text-slate-400 hover:text-white p-1">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
-
-      <!-- Modal Body -->
       <div class="p-6 overflow-y-auto space-y-6 flex-1">
-        
-        <!-- Form Tambah Naskah -->
         <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <h4 class="text-xs font-semibold text-blue-400 uppercase tracking-wider">Tambah / Simpan Naskah Baru</h4>
-          <input type="text" id="scriptTitle" placeholder="Judul Naskah (contoh: Review Game Part 1)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
-          <textarea id="scriptBody" rows="5" placeholder="Tuliskan isi naskah skrip di sini..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"></textarea>
+          <h4 class="text-xs font-semibold text-blue-400 uppercase tracking-wider">Simpan Naskah Saat Ini</h4>
+          <input type="text" id="scriptTitle" placeholder="Judul Naskah (contoh: Video YouTube Part 1)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
           <button onclick="saveScript()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5">
-            <i class="fa-solid fa-floppy-disk"></i> Simpan ke Database Firebase
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Naskah
           </button>
         </div>
-
-        <!-- Daftar Naskah Tersimpan -->
         <div>
           <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Daftar Naskah Tersimpan</h4>
           <div id="scriptList" class="space-y-2">
             <p class="text-xs text-slate-500 italic">Memuat daftar naskah...</p>
           </div>
         </div>
-
       </div>
-
     </div>
   </div>
 
@@ -232,17 +214,15 @@
     const scriptsRef = ref(db, 'teleprompter/scripts');
 
     let currentMode = 'controller';
-    let isRemoteUpdate = false;
+    let isUpdatingFromFirebase = false;
     let autoScrollInterval = null;
-    let currentScriptText = `Selamat datang di SyncPrompt Pro!
+    let debounceTimer = null;
 
-Aplikasi teleprompter ini terhubung secara otomatis antara PC dan HP menggunakan Firebase Realtime Database.
+    let defaultText = `Selamat datang di SyncPrompt Pro!
 
-Layar PC bertindak sebagai Controller utama tempat kamu bisa memilih naskah dari database, mengatur kecepatan, dan mengontrol bacaan.
+Ketik atau paste naskah kamu pada kotak "Edit Naskah" di sidebar sebelah kiri.
 
-Layar HP dipasang di tripod / kaca teleprompter di depan kamera.
-
-Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah di HP secara real-time!`;
+Naskah ini akan langsung tersimpan otomatis dan muncul secara real-time di layar HP.`;
 
     let localState = {
       isPlaying: false,
@@ -253,24 +233,32 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       showFocusLine: true,
       isOled: true,
       scrollProgress: 0,
-      text: currentScriptText
+      text: defaultText
     };
 
     const teleprompterContainer = document.getElementById('teleprompterContainer');
     const prompterContent = document.getElementById('prompterContent');
     const focusLine = document.getElementById('focusLine');
     const sidebarControls = document.getElementById('sidebarControls');
+    const directScriptEditor = document.getElementById('directScriptEditor');
 
-    // SINKRONISASI REALTIME FIREBASE
+    // MENDENGARKAN PERUBAHAN REALTIME DARIPADA FIREBASE
     onValue(stateRef, (snapshot) => {
       const data = snapshot.val();
-      if (!data) return;
-
-      isRemoteUpdate = true;
       
+      // Jika database kosong sama sekali (pertama kali dipasang)
+      if (!data) {
+        syncToFirebase(localState);
+        return;
+      }
+
+      // Update Teks (tanpa me-reset jika sudah ada di Firebase)
       if (data.text !== undefined && data.text !== localState.text) {
         localState.text = data.text;
         renderText(localState.text);
+        if (document.activeElement !== directScriptEditor) {
+          directScriptEditor.value = localState.text;
+        }
       }
 
       localState.isPlaying = data.isPlaying ?? false;
@@ -283,33 +271,30 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
 
       updateUIFromState();
 
-      // Sinkronisasi Scroll untuk iOS & PC
+      // Sinkronisasi Pergerakan Scroll
       if (data.scrollProgress !== undefined) {
-        const diff = Math.abs(data.scrollProgress - localState.scrollProgress);
-        if (diff > 0.002) {
-          localState.scrollProgress = data.scrollProgress;
-          const maxScroll = Math.max(1, teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight);
-          
-          // Menggunakan scrollTo langsung agar kompatibel dengan iOS Safari
-          teleprompterContainer.scrollTo({
-            top: localState.scrollProgress * maxScroll,
-            behavior: 'auto'
-          });
+        localState.scrollProgress = data.scrollProgress;
+        const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
+        if (maxScroll > 0) {
+          const targetScrollTop = localState.scrollProgress * maxScroll;
+          if (Math.abs(teleprompterContainer.scrollTop - targetScrollTop) > 4) {
+            isUpdatingFromFirebase = true;
+            teleprompterContainer.scrollTop = targetScrollTop;
+            setTimeout(() => { isUpdatingFromFirebase = false; }, 60);
+          }
         }
       }
 
-      if (localState.isPlaying) {
+      // Auto scroll hanya dijalankan dari PC (Controller)
+      if (currentMode === 'controller' && localState.isPlaying) {
         startAutoScroll();
       } else {
         stopAutoScroll();
       }
-
-      setTimeout(() => { isRemoteUpdate = false; }, 150);
     });
 
     onValue(scriptsRef, (snapshot) => {
-      const scripts = snapshot.val();
-      renderScriptList(scripts);
+      renderScriptList(snapshot.val());
     });
 
     window.switchMode = function(mode) {
@@ -325,6 +310,7 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
         btnReader.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-blue-600 text-white shadow";
         btnController.className = "px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white";
         sidebarControls.classList.add('hidden');
+        stopAutoScroll(); // HP Reader murni menerima sync
       }
     };
 
@@ -342,23 +328,14 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
       prompterContent.style.fontSize = `${localState.fontSize}px`;
       prompterContent.style.lineHeight = localState.lineHeight;
 
-      if (localState.isMirror) {
-        prompterContent.classList.add('mirror-mode');
-      } else {
-        prompterContent.classList.remove('mirror-mode');
-      }
+      if (localState.isMirror) prompterContent.classList.add('mirror-mode');
+      else prompterContent.classList.remove('mirror-mode');
 
-      if (localState.showFocusLine) {
-        focusLine.classList.remove('hidden');
-      } else {
-        focusLine.classList.add('hidden');
-      }
+      if (localState.showFocusLine) focusLine.classList.remove('hidden');
+      else focusLine.classList.add('hidden');
 
-      if (localState.isOled) {
-        document.body.classList.add('oled-bg');
-      } else {
-        document.body.classList.remove('oled-bg');
-      }
+      if (localState.isOled) document.body.classList.add('oled-bg');
+      else document.body.classList.remove('oled-bg');
     }
 
     function updateUIFromState() {
@@ -383,6 +360,15 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
         ...partialState
       });
     }
+
+    window.handleDirectTextChange = function(val) {
+      localState.text = val;
+      renderText(val);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        syncToFirebase({ text: val, scrollProgress: 0 });
+      }, 300);
+    };
 
     window.togglePlay = function() {
       localState.isPlaying = !localState.isPlaying;
@@ -441,7 +427,9 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
     };
 
     window.handleScroll = function() {
-      if (isRemoteUpdate) return;
+      if (isUpdatingFromFirebase) return;
+      if (currentMode !== 'controller') return;
+
       const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
       if (maxScroll <= 0) return;
       
@@ -453,9 +441,13 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
     function startAutoScroll() {
       if (autoScrollInterval) clearInterval(autoScrollInterval);
       autoScrollInterval = setInterval(() => {
-        if (currentMode === 'controller' || localState.isPlaying) {
-          teleprompterContainer.scrollTop += localState.speed * 0.8;
-          handleScroll();
+        if (currentMode === 'controller' && localState.isPlaying) {
+          const maxScroll = teleprompterContainer.scrollHeight - teleprompterContainer.clientHeight;
+          if (maxScroll > 0) {
+            teleprompterContainer.scrollTop += localState.speed * 0.8;
+            const progress = teleprompterContainer.scrollTop / maxScroll;
+            syncToFirebase({ scrollProgress: progress });
+          }
         }
       }, 30);
     }
@@ -477,20 +469,17 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
 
     window.saveScript = function() {
       const title = document.getElementById('scriptTitle').value.trim();
-      const body = document.getElementById('scriptBody').value.trim();
-
-      if (!title || !body) {
-        alert('Mohon isi judul dan isi naskah!');
+      if (!title) {
+        alert('Mohon masukkan judul naskah!');
         return;
       }
 
       push(scriptsRef, {
         title: title,
-        body: body,
+        body: localState.text,
         createdAt: Date.now()
       }).then(() => {
         document.getElementById('scriptTitle').value = '';
-        document.getElementById('scriptBody').value = '';
         alert('Naskah berhasil disimpan ke Database!');
       });
     };
@@ -509,11 +498,11 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
           <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-3">
             <div class="overflow-hidden">
               <h5 class="text-xs font-bold text-slate-200 truncate">${item.title}</h5>
-              <p class="text-[10px] text-slate-500 truncate">${item.body.substring(0, 60)}...</p>
+              <p class="text-[10px] text-slate-500 truncate">${item.body.substring(0, 50)}...</p>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <button onclick="useScript('${key}')" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold rounded-lg transition">
-                Gunakan
+                Muat Teks
               </button>
               <button onclick="deleteScript('${key}')" class="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition">
                 <i class="fa-solid fa-trash text-xs"></i>
@@ -529,6 +518,7 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
         if (selected) {
           localState.text = selected.body;
           renderText(selected.body);
+          directScriptEditor.value = selected.body;
           syncToFirebase({ text: selected.body, scrollProgress: 0 });
           closeScriptModal();
         }
@@ -540,8 +530,6 @@ Setiap scroll atau klik paragraf di PC akan langsung memindahkan posisi naskah d
         }
       };
     }
-
-    renderText(localState.text);
   </script>
 </body>
 </html>
