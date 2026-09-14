@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeleSync Pro - Teleprompter Real-Time Synchronized</title>
+    <title>TeleSync Pro - Smooth Real-Time Teleprompter</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -39,7 +39,6 @@
     </script>
 
     <style>
-        /* Custom scrollbar style */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -55,18 +54,6 @@
             background: #4b5563;
         }
 
-        /* Mirror transformations */
-        .mirror-h {
-            transform: scaleX(-1);
-        }
-        .mirror-v {
-            transform: scaleY(-1);
-        }
-        .mirror-both {
-            transform: scale(-1, -1);
-        }
-
-        /* Reading Focus Line */
         .focus-line-overlay {
             position: absolute;
             left: 0;
@@ -79,7 +66,6 @@
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
         }
 
-        /* Custom Themes */
         .theme-oled {
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -93,7 +79,6 @@
             color: #facc15 !important;
         }
 
-        /* Hide scrollbars for prompt window in screen mode */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -105,7 +90,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
 
-    <!-- Navbar Header -->
+    <!-- Header -->
     <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-4 lg:px-6 py-3 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
@@ -115,26 +100,22 @@
                 <h1 class="font-bold text-lg leading-tight tracking-wide flex items-center gap-2">
                     TeleSync <span class="bg-brand-500/20 text-brand-400 text-xs px-2 py-0.5 rounded border border-brand-500/30">PRO</span>
                 </h1>
-                <p class="text-xs text-slate-400">Teleprompter Real-Time Synchronized</p>
+                <p class="text-xs text-slate-400">Smooth Manual & Auto Scroll Sync</p>
             </div>
         </div>
 
-        <!-- Room Status & Quick Actions -->
         <div class="flex items-center space-x-2 md:space-x-4">
-            <!-- Connection Badge -->
             <div id="connectionStatusBadge" class="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-800 border border-slate-700 text-slate-400">
                 <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
                 <span id="statusText">Menghubungkan Cloud...</span>
             </div>
 
-            <!-- Room Info Button -->
             <button id="btnRoomInfo" onclick="openRoomModal()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition">
                 <i class="fa-solid fa-key text-brand-400"></i>
                 <span>Ruang: <strong id="currentRoomCodeDisplay" class="text-brand-400 font-mono tracking-wider">------</strong></span>
                 <i class="fa-solid fa-qrcode ml-1 text-slate-400"></i>
             </button>
 
-            <!-- Mode Selector Switch -->
             <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
                 <button id="btnModeController" onclick="switchViewMode('controller')" class="px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow">
                     <i class="fa-solid fa-sliders mr-1.5"></i>Pengendali (PC)
@@ -144,56 +125,52 @@
                 </button>
             </div>
 
-            <!-- Fullscreen Button -->
             <button onclick="toggleFullscreen()" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Layar Penuh (F)">
                 <i class="fa-solid fa-expand"></i>
             </button>
         </div>
     </header>
 
-    <!-- Notification Toast Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
-    <!-- Main App Content -->
+    <!-- Main Body -->
     <main class="flex-1 flex flex-col relative overflow-hidden">
 
-        <!-- ================= CONTROLLER MODE (PC MODE) ================= -->
+        <!-- CONTROLLER MODE -->
         <div id="controllerView" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden h-[calc(100vh-65px)]">
 
-            <!-- LEFT PANEL: Controls & Settings (Col 4) -->
-            <div class="lg:col-span-4 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-y-auto p-4 space-y-6">
+            <!-- LEFT PANEL -->
+            <div class="lg:col-span-4 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-y-auto p-4 space-y-5">
 
-                <!-- Room Sync Panel -->
+                <!-- Room Panel -->
                 <div class="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-3">
                     <div class="flex justify-between items-center">
                         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <i class="fa-solid fa-wifi text-brand-400"></i> Sinkronisasi Ruangan
                         </span>
-                        <span id="roomRoleTag" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">Cloud Sync Aktif</span>
+                        <span id="roomRoleTag" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">Cloud Sync Active</span>
                     </div>
 
-                    <div id="activeRoomInfo" class="flex flex-col gap-2">
-                        <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                            <div>
-                                <div class="text-[10px] text-slate-400">Kode Akses Ruangan (6 Karakter)</div>
-                                <div id="displayRoomCode" class="text-xl font-mono font-extrabold text-brand-400 tracking-wider">------</div>
-                            </div>
-                            <div class="flex gap-1.5">
-                                <button onclick="copyShareLink()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition" title="Salin Tautan HP">
-                                    <i class="fa-solid fa-link mr-1"></i>Salin Tautan
-                                </button>
-                                <button onclick="openRoomModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition" title="QR Code">
-                                    <i class="fa-solid fa-qrcode"></i>
-                                </button>
-                            </div>
+                    <div class="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                        <div>
+                            <div class="text-[10px] text-slate-400">Kode Ruangan (6 Karakter)</div>
+                            <div id="displayRoomCode" class="text-xl font-mono font-extrabold text-brand-400 tracking-wider">------</div>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="copyShareLink()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition">
+                                <i class="fa-solid fa-link mr-1"></i>Salin Tautan
+                            </button>
+                            <button onclick="openRoomModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700 transition">
+                                <i class="fa-solid fa-qrcode"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Primary Playback Controls -->
+                <!-- Playback Control -->
                 <div class="space-y-3">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-circle-play text-emerald-400"></i> Kontrol Pemutaran
+                        <i class="fa-solid fa-circle-play text-emerald-400"></i> Kontrol Utama
                     </span>
                     
                     <div class="grid grid-cols-3 gap-2">
@@ -201,55 +178,49 @@
                             <i id="playIcon" class="fa-solid fa-play text-lg"></i>
                             <span id="playBtnLabel">MULAI (Spasi)</span>
                         </button>
-                        <button onclick="resetScroll()" class="py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition" title="Reset ke Atas (R)">
+                        <button onclick="resetScroll()" class="py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5 transition" title="Reset Ke Atas (R)">
                             <i class="fa-solid fa-rotate-left"></i>
                             <span class="text-xs">Reset</span>
                         </button>
                     </div>
 
-                    <!-- Countdown Trigger -->
                     <button onclick="startCountdownAndPlay()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-2 transition">
-                        <i class="fa-solid fa-stopwatch text-amber-400"></i>
-                        Mulai dengan Hitung Mundur (3 Detik)
+                        <i class="fa-solid fa-stopwatch text-amber-400"></i> Mulai dengan Hitung Mundur (3 Detik)
                     </button>
                 </div>
 
-                <!-- Speed & Scroll Adjustments -->
+                <!-- Smooth Scroll Adjuster -->
                 <div class="space-y-4 bg-slate-950/40 border border-slate-800/80 p-4 rounded-2xl">
+                    <!-- Manual Scroll Slider -->
                     <div class="space-y-1.5">
                         <div class="flex justify-between items-center text-xs">
                             <label class="font-semibold text-slate-300 flex items-center gap-1.5">
-                                <i class="fa-solid fa-gauge-high text-brand-400"></i> Kecepatan Scroll
+                                <i class="fa-solid fa-hand text-amber-400"></i> Scroll Manual Presisi
                             </label>
-                            <span id="speedValueDisplay" class="font-mono font-bold text-brand-400 text-sm">3 px/frame</span>
+                            <span id="scrollProgressPercent" class="font-mono font-bold text-amber-400 text-sm">0%</span>
                         </div>
-                        <input type="range" id="inputSpeed" min="1" max="15" value="3" oninput="updateSpeed(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500">
-                        <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                            <span>Lambat (1)</span>
-                            <span>Sedang (7)</span>
-                            <span>Cepat (15)</span>
-                        </div>
+                        <input type="range" id="inputScrollProgress" min="0" max="1000" value="0" oninput="onManualSliderInput(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                        <p class="text-[10px] text-slate-500">Anda juga bisa geser/scroll mouse di area preview teks.</p>
                     </div>
 
-                    <!-- Manual Scroll Slider Sync -->
+                    <!-- Auto-scroll Speed -->
                     <div class="space-y-1.5 pt-2 border-t border-slate-800">
                         <div class="flex justify-between items-center text-xs">
                             <label class="font-semibold text-slate-300 flex items-center gap-1.5">
-                                <i class="fa-solid fa-arrows-up-down text-sky-400"></i> Posisi Naskah
+                                <i class="fa-solid fa-gauge-high text-brand-400"></i> Kecepatan Auto-Scroll
                             </label>
-                            <span id="scrollProgressPercent" class="font-mono font-bold text-sky-400 text-sm">0%</span>
+                            <span id="speedValueDisplay" class="font-mono font-bold text-brand-400 text-sm">3 px/s</span>
                         </div>
-                        <input type="range" id="inputScrollProgress" min="0" max="100" value="0" oninput="manualScrollSlider(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500">
+                        <input type="range" id="inputSpeed" min="1" max="15" value="3" oninput="updateSpeed(this.value)" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-brand-500">
                     </div>
                 </div>
 
-                <!-- Visual & Typography Settings -->
+                <!-- Font & Theme Settings -->
                 <div class="space-y-4">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-font text-purple-400"></i> Tampilan & Tipografi
+                        <i class="fa-solid fa-font text-purple-400"></i> Tampilan Teks
                     </span>
 
-                    <!-- Font Size & Line Height Grid -->
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1">
                             <label class="text-xs text-slate-400 flex justify-between">
@@ -267,19 +238,18 @@
                         </div>
                     </div>
 
-                    <!-- Text Alignment & Colors -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="text-xs text-slate-400 block mb-1">Rata Teks</label>
                             <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
-                                <button onclick="updateTextAlign('left')" id="alignLeftBtn" class="flex-1 py-1 rounded text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-align-left"></i></button>
+                                <button onclick="updateTextAlign('left')" id="alignLeftBtn" class="flex-1 py-1 rounded text-xs text-slate-400"><i class="fa-solid fa-align-left"></i></button>
                                 <button onclick="updateTextAlign('center')" id="alignCenterBtn" class="flex-1 py-1 rounded text-xs bg-brand-600 text-white"><i class="fa-solid fa-align-center"></i></button>
-                                <button onclick="updateTextAlign('right')" id="alignRightBtn" class="flex-1 py-1 rounded text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-align-right"></i></button>
+                                <button onclick="updateTextAlign('right')" id="alignRightBtn" class="flex-1 py-1 rounded text-xs text-slate-400"><i class="fa-solid fa-align-right"></i></button>
                             </div>
                         </div>
                         <div>
                             <label class="text-xs text-slate-400 block mb-1">Tema Warna</label>
-                            <select id="selectTheme" onchange="updateTheme(this.value)" class="w-full bg-slate-800 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-brand-500">
+                            <select id="selectTheme" onchange="updateTheme(this.value)" class="w-full bg-slate-800 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 text-slate-200">
                                 <option value="theme-dark">Dark Slate</option>
                                 <option value="theme-oled">OLED Black (#000)</option>
                                 <option value="theme-yellow">Kuning Kontras Tinggi</option>
@@ -287,106 +257,81 @@
                         </div>
                     </div>
 
-                    <!-- Mirror Options -->
                     <div class="space-y-2 pt-2 border-t border-slate-800">
-                        <label class="text-xs text-slate-400 block">Cermin Layar (Mirror Rig Camera)</label>
+                        <label class="text-xs text-slate-400 block">Cermin Layar (Mirror Camera)</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="btnMirrorH" onclick="toggleMirror('h')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                            <button id="btnMirrorH" onclick="toggleMirror('h')" class="py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-arrows-left-right"></i> Horizontal (X)
                             </button>
-                            <button id="btnMirrorV" onclick="toggleMirror('v')" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                            <button id="btnMirrorV" onclick="toggleMirror('v')" class="py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-arrows-up-down"></i> Vertikal (Y)
                             </button>
                         </div>
                     </div>
 
-                    <!-- Reading Focus Line Guide Toggle -->
                     <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-ruler-horizontal text-indigo-400 text-xs"></i>
-                            <span class="text-xs text-slate-300 font-semibold">Garis Pandu Baca</span>
-                        </div>
+                        <span class="text-xs text-slate-300 font-semibold">Garis Pandu Baca</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="toggleFocusLine" onchange="updateFocusLineToggle(this.checked)" checked class="sr-only peer">
-                            <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+                            <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
                         </label>
                     </div>
                 </div>
 
-                <!-- Shortcuts Help Box -->
-                <div class="mt-auto bg-slate-950/60 border border-slate-800/80 p-3 rounded-xl text-[11px] text-slate-400 space-y-1 font-mono">
-                    <div class="font-bold text-slate-300 font-sans mb-1 flex items-center gap-1">
-                        <i class="fa-solid fa-keyboard text-brand-400"></i> Pintasan Kibor:
-                    </div>
-                    <div class="flex justify-between"><span>[Spasi]</span> <span class="text-slate-300">Play / Pause</span></div>
-                    <div class="flex justify-between"><span>[Atas/Bawah]</span> <span class="text-slate-300">Kecepatan +/-</span></div>
-                    <div class="flex justify-between"><span>[R]</span> <span class="text-slate-300">Reset Scroll</span></div>
-                    <div class="flex justify-between"><span>[M]</span> <span class="text-slate-300">Toggle Mirror (X)</span></div>
-                    <div class="flex justify-between"><span>[F]</span> <span class="text-slate-300">Layar Penuh</span></div>
-                </div>
-
             </div>
 
-            <!-- CENTER PANEL: Live Prompt Preview (Col 5) -->
+            <!-- CENTER PANEL: Live Teleprompter Window -->
             <div class="lg:col-span-5 bg-black flex flex-col h-full relative border-r border-slate-800">
                 <div class="bg-slate-900/80 border-b border-slate-800 px-4 py-2 flex justify-between items-center text-xs text-slate-400 z-10">
                     <span class="font-semibold flex items-center gap-1.5 text-slate-200">
                         <i class="fa-solid fa-eye text-emerald-400"></i> Pratinjau Tampilan Teleprompter
                     </span>
                     <span class="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
-                        Live Preview
+                        Smooth Engine Active
                     </span>
                 </div>
 
-                <!-- Teleprompter Container Window -->
-                <div id="promptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none" onscroll="handleLocalScroll()">
-                    <!-- Reading Focus Overlay Line -->
+                <div id="promptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none">
                     <div id="focusLineOverlay" class="focus-line-overlay top-1/3 h-16"></div>
-
-                    <!-- Padding top & bottom so text scrolls through center -->
                     <div class="py-[45vh] px-8 md:px-12 max-w-4xl mx-auto">
                         <div id="promptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap">
-                            Selamat datang di TeleSync PRO! Naskah Anda akan tampil di sini. Hubungkan smartphone Anda untuk mulai menggunakan teleprompter secara terintegrasi real-time.
+                            Selamat datang di TeleSync PRO! Naskah Anda akan tampil di sini.
                         </div>
                     </div>
                 </div>
 
-                <!-- Floating Playback Bar on Preview -->
+                <!-- Floating Playback controls -->
                 <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur border border-slate-700/80 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3">
                     <button onclick="togglePlay()" class="w-10 h-10 rounded-full bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center transition shadow-lg shadow-brand-600/30">
                         <i id="previewPlayIcon" class="fa-solid fa-play"></i>
                     </button>
                     <div class="h-4 w-px bg-slate-700"></div>
-                    <button onclick="changeSpeed(-1)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs">
+                    <button onclick="changeSpeed(-1)" class="w-8 h-8 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center text-xs">
                         <i class="fa-solid fa-minus"></i>
                     </button>
                     <span id="previewSpeedDisplay" class="font-mono text-xs font-bold text-brand-400 w-12 text-center">3 px</span>
-                    <button onclick="changeSpeed(1)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs">
+                    <button onclick="changeSpeed(1)" class="w-8 h-8 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center text-xs">
                         <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- RIGHT PANEL: Script Editor & Templates (Col 3) -->
+            <!-- RIGHT PANEL: Script Editor -->
             <div class="lg:col-span-3 bg-slate-900 flex flex-col h-full overflow-hidden">
                 <div class="p-4 border-b border-slate-800 flex justify-between items-center">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Editor Naskah
                     </span>
-                    <!-- Script Presets Dropdown -->
-                    <select onchange="loadPresetScript(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500">
+                    <select onchange="loadPresetScript(this.value)" class="bg-slate-800 border border-slate-700 text-xs text-slate-300 rounded-lg px-2 py-1">
                         <option value="">-- Contoh Naskah --</option>
                         <option value="speech">Pidato Resmi</option>
-                        <option value="tech">Review Gadget YouTube</option>
-                        <option value="news">Siaran Berita Kilat</option>
+                        <option value="tech">Review Gadget</option>
                     </select>
                 </div>
 
-                <!-- Textarea Editor -->
                 <div class="flex-1 p-4 flex flex-col gap-2">
-                    <textarea id="scriptTextarea" oninput="onScriptInputChange(this.value)" placeholder="Ketik atau tempel naskah pidato/presentasi Anda di sini..." class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 font-sans resize-none leading-relaxed"></textarea>
+                    <textarea id="scriptTextarea" oninput="onScriptInputChange(this.value)" placeholder="Ketik naskah di sini..." class="w-full flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-brand-500 resize-none leading-relaxed"></textarea>
 
-                    <!-- Text Statistics Bar -->
                     <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex justify-between items-center text-xs text-slate-400 font-mono">
                         <div>Kata: <strong id="wordCountDisplay" class="text-slate-200 font-sans">0</strong></div>
                         <div>Karakter: <strong id="charCountDisplay" class="text-slate-200 font-sans">0</strong></div>
@@ -397,36 +342,32 @@
 
         </div>
 
-        <!-- ================= DISPLAY MODE (MOBILE / RIG DISPLAY) ================= -->
+        <!-- DISPLAY MODE (MOBILE/HP) -->
         <div id="displayView" class="hidden absolute inset-0 bg-black z-30 flex flex-col overflow-hidden">
-            <!-- Fullscreen Teleprompter Area -->
-            <div id="mobilePromptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none" onscroll="handleLocalScroll()">
-                <!-- Reading Focus Line Overlay -->
+            <div id="mobilePromptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none">
                 <div id="mobileFocusLineOverlay" class="focus-line-overlay top-1/3 h-20"></div>
-
                 <div class="py-[45vh] px-6 sm:px-12 max-w-5xl mx-auto">
                     <div id="mobilePromptTextDisplay" class="transition-all duration-75 text-center leading-relaxed font-bold break-words whitespace-pre-wrap">
-                        Selamat datang di TeleSync PRO! Menunggu perintah dari Pengendali...
+                        Menunggu perintah dari Pengendali...
                     </div>
                 </div>
             </div>
 
-            <!-- Minimal Overlay Bar for Mobile -->
-            <div id="mobileOverlayControls" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 backdrop-blur border border-slate-700 px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-4 transition-opacity duration-300">
+            <div id="mobileOverlayControls" class="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 backdrop-blur border border-slate-700 px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-4">
                 <button onclick="togglePlay()" class="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center">
                     <i id="mobilePlayIcon" class="fa-solid fa-play"></i>
                 </button>
                 <div class="h-4 w-px bg-slate-700"></div>
-                <button onclick="toggleMirror('h')" class="text-slate-300 hover:text-white text-sm" title="Mirror X">
+                <button onclick="toggleMirror('h')" class="text-slate-300 text-sm">
                     <i class="fa-solid fa-arrows-left-right"></i>
                 </button>
-                <button onclick="switchViewMode('controller')" class="text-slate-300 hover:text-white text-xs font-semibold px-2 py-1 bg-slate-800 rounded-md border border-slate-700">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> Mode PC
+                <button onclick="switchViewMode('controller')" class="text-slate-300 text-xs font-semibold px-2 py-1 bg-slate-800 rounded-md border border-slate-700">
+                    Mode PC
                 </button>
             </div>
         </div>
 
-        <!-- Room Connection Modal -->
+        <!-- Room Modal -->
         <div id="roomModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6 relative">
                 <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2">
@@ -434,109 +375,79 @@
                 </button>
 
                 <div class="text-center space-y-1">
-                    <div class="w-12 h-12 bg-brand-600/20 text-brand-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-brand-500/30">
-                        <i class="fa-solid fa-qrcode text-2xl"></i>
-                    </div>
                     <h3 class="text-xl font-bold text-white">Hubungkan Ruangan Teleprompter</h3>
                     <p class="text-xs text-slate-400">Masukkan kode 6 karakter yang sama di PC & HP Anda.</p>
                 </div>
 
                 <div class="space-y-4">
-                    <!-- Share QR Code Display -->
                     <div id="qrCodeWrapper" class="hidden flex flex-col items-center justify-center bg-white p-4 rounded-2xl border border-slate-700">
                         <div id="qrcodeCanvas" class="mb-2"></div>
                         <p id="qrRoomCodeText" class="text-slate-900 font-mono font-extrabold text-lg tracking-widest"></p>
                     </div>
 
-                    <!-- Actions -->
                     <div class="space-y-3">
                         <div>
-                            <label class="text-xs text-slate-400 mb-1 block">Kode Ruangan (Maksimal 6 Karakter)</label>
+                            <label class="text-xs text-slate-400 mb-1 block">Kode Ruangan (6 Karakter)</label>
                             <div class="flex gap-2">
-                                <input type="text" id="inputRoomCode" placeholder="TS8K9P" maxlength="6" oninput="formatRoomInput(this)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 font-mono text-center text-lg font-bold tracking-widest text-brand-400 uppercase focus:outline-none focus:border-brand-500">
-                                <button onclick="joinRoomFromInput()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
+                                <input type="text" id="inputRoomCode" placeholder="TS8K9P" maxlength="6" oninput="formatRoomInput(this)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 font-mono text-center text-lg font-bold tracking-widest text-brand-400 uppercase">
+                                <button onclick="joinRoomFromInput()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm">
                                     Gabung
                                 </button>
                             </div>
                         </div>
 
-                        <div class="relative flex py-2 items-center">
-                            <div class="flex-grow border-t border-slate-800"></div>
-                            <span class="flex-shrink mx-4 text-xs text-slate-500 font-medium">ATAU</span>
-                            <div class="flex-grow border-t border-slate-800"></div>
-                        </div>
-
-                        <button onclick="createNewRoom()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 text-sm flex items-center justify-center gap-2 transition">
-                            <i class="fa-solid fa-plus text-brand-400"></i> Buat Ruangan 6 Karakter Acak
+                        <button onclick="createNewRoom()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus text-brand-400"></i> Buat Ruangan Acak (6 Karakter)
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Countdown Animation Overlay -->
+        <!-- Countdown Overlay -->
         <div id="countdownOverlay" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center flex-col">
             <div id="countdownNumber" class="text-9xl font-extrabold text-brand-500 animate-bounce">3</div>
-            <p class="text-slate-400 text-sm mt-4 font-semibold tracking-wider">Bersiap-siap membaca...</p>
+            <p class="text-slate-400 text-sm mt-4 font-semibold">Bersiap-siap membaca...</p>
         </div>
 
     </main>
 
-    <!-- Cloud Sync & Application Engine Logic -->
+    <!-- App Engine Logic -->
     <script>
-        // Preset Sample Scripts in Indonesian
         const presetScripts = {
             speech: `PIDATO SAMBUTAN RESMI
 Assalamu'alaikum Warahmatullahi Wabarakatuh,
 Selamat pagi dan salam sejahtera untuk kita semua.
 
-Yang saya hormati jajaran direksi, para tamu undangan, serta seluruh tim yang berhadir pada pagi hari ini.
+Yang saya hormati jajaran direksi serta seluruh tim yang hadir pada pagi hari ini.
+Marilah kita panjatkan puji dan syukur karena dapat berkumpul dalam acara ini.
 
-Puji dan syukur marilah kita panjatkan ke hadirat Tuhan Yang Maha Esa, karena atas rahmat dan karunia-Nya kita dapat berkumpul dalam acara tahunan ini dalam keadaan sehat wal'afiat.
-
-Pada kesempatan yang berbahagia ini, saya ingin menyampaikan apresiasi setinggi-tingginya atas kerja keras dan dedikasi luar biasa yang telah ditunjukkan oleh seluruh anggota tim sepanjang tahun ini.
-
-Mari kita terus melangkah maju dengan semangat inovasi dan kolaborasi untuk mencapai target yang lebih besar di masa depan. Terima kasih.`,
+Mari kita terus melangkah maju dengan semangat inovasi dan kolaborasi untuk mencapai target yang lebih besar!`,
 
             tech: `REVIEW GADGET & TEKNOLOGI
-Halo semuanya, kembali lagi di channel gadget favorit kalian!
+Halo semuanya, kembali lagi di channel kami!
 
-Hari ini kita kedatangan smartphone flagship terbaru yang digadang-gadang punya kamera terbaik di kelasnya.
+Hari ini kita kedatangan smartphone flagship terbaru yang punya kamera super jernih.
 
-Dari segi desain, smartphone ini mengusung bodi titanium murni yang terasa sangat kokoh namun tetap ringan saat digenggam.
-
-Layarnya menggunakan panel AMOLED 120Hz yang sangat responsif, cocok untuk navigasi harian maupun bermain game berat.
-
-Bagaimana dengan performa baterainya? Mari kita uji bersama melalui pengujian ketahanan selama 24 jam nonstop berikut ini!`,
-
-            news: `SIARAN BERITA KILAT
-Selamat malam pendengar, kembali bersama Berita Utama Kilat.
-
-Pemerintah kota secara resmi meluncurkan program transportasi umum berbasis listrik terbaru guna mengurangi emisi karbon udara.
-
-Fasilitas baru ini mencakup lebih dari 50 armada bus ramah lingkungan yang mulai beroperasi efektif sejak hari Senin mendatang.
-
-Masyarakat dihimbau untuk menggunakan layanan transportasi publik ini dengan memanfaatkan tarif khusus promo pembukaan.
-
-Demikian berita kilat saat ini, ikuti terus pembaruan informasi terkini hanya di saluran kami.`
+Layarnya mengusung AMOLED 120Hz yang sangat responsif, cocok untuk bernavigasi harian maupun bermain game berat.`
         };
 
-        // Teleprompter App State
+        // App State with Dual Targets for Smooth Lerp Motion
         window.appState = {
             roomId: '',
             isController: true,
             scriptText: `Selamat datang di TeleSync PRO!
 
-Teleprompter ini dirancang untuk produksi video profesional, siaran berita, maupun pembuatan konten YouTube/TikTok.
+Sistem scroll telah diperbarui menggunakan Interpolation Engine. 
 
-Fitur Unggulan TeleSync PRO:
-1. Sinkronisasi Cloud Real-Time: Scroll di PC, layar di Smartphone otomatis ikut bergerak secara akurat via Cloud.
-2. Mode Cermin (Mirroring): Mendukung Flip Horizontal (X) untuk kaca teleprompter beam-splitter profesional.
-3. Kustomisasi Lengkap: Atur ukuran teks, jarak baris, warna tema, serta garis pandu baca (Focus Guide).
-4. Hitung Mundur Otomatis: Mulai perekaman dengan aba-aba 3 detik.
+Sekarang Anda bisa melakukan scroll manual lewat Mouse Wheel atau Slider tanpa adanya efek melompat-lompat di layar HP!
 
-Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel kanan!`,
-            scrollPercent: 0,
+Cobalah untuk scroll mouse di area preview ini atau tekan Spasi untuk auto-scroll!`,
+            
+            // High Precision Scroll Targets (0.0 to 1.0)
+            targetScrollPercent: 0,
+            currentScrollPercent: 0,
+            
             isPlaying: false,
             speed: 3,
             fontSize: 42,
@@ -548,15 +459,14 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             focusLine: true
         };
 
-        // PeerJS Cloud Relay State
         let peer = null;
         let activeConnections = [];
         let hostConnection = null;
+        let lastBroadcastTime = 0;
 
-        // Function to Generate Exactly 6-Character Room Code
         function generate6CharRoomCode() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let code = 'TS'; // Prefix
+            let code = 'TS';
             for (let i = 0; i < 4; i++) {
                 code += chars.charAt(Math.floor(Math.random() * chars.length));
             }
@@ -567,38 +477,26 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
         }
 
-        // Initialize PeerJS Cloud Connection
+        // WebRTC Sync Initialization
         function initPeerCloud(roomCode) {
-            if (peer) {
-                try { peer.destroy(); } catch(e){}
-            }
-
+            if (peer) { try { peer.destroy(); } catch(e){} }
             updateConnectionBadge('amber', 'Menghubungkan Cloud...');
             const peerId = 'telesync-' + roomCode.toLowerCase();
 
-            // Connect to public PeerJS Cloud server
             peer = new Peer(peerId, { debug: 1 });
 
             peer.on('open', (id) => {
-                console.log('Peer Host Opened:', id);
                 updateConnectionBadge('emerald', 'Cloud Terhubung (Host)');
             });
 
             peer.on('connection', (conn) => {
-                console.log('Client connected:', conn.peer);
                 activeConnections.push(conn);
-                
                 conn.on('open', () => {
-                    // Send current full state to newly connected device
                     conn.send({ type: 'SYNC_STATE', state: window.appState });
-                    showToast("Perangkat HP/Layar baru terhubung!", "success");
-                    updateConnectionBadge('emerald', `Cloud (${activeConnections.length} HP Terhubung)`);
+                    showToast("Perangkat HP terhubung!", "success");
+                    updateConnectionBadge('emerald', `Cloud (${activeConnections.length} Terhubung)`);
                 });
-
-                conn.on('data', (data) => {
-                    handleIncomingData(data);
-                });
-
+                conn.on('data', (data) => handleIncomingData(data));
                 conn.on('close', () => {
                     activeConnections = activeConnections.filter(c => c !== conn);
                     updateConnectionBadge('emerald', activeConnections.length > 0 ? `Cloud (${activeConnections.length} Terhubung)` : 'Cloud Terhubung');
@@ -607,50 +505,40 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
 
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    // Room code already taken as Host -> Connect as Client/Display
                     connectAsClient(peerId);
                 } else {
-                    console.warn('Peer error:', err);
-                    updateConnectionBadge('amber', 'Cloud Relay Aktif');
+                    updateConnectionBadge('amber', 'Cloud Active');
                 }
             });
         }
 
         function connectAsClient(hostPeerId) {
-            if (peer) {
-                try { peer.destroy(); } catch(e){}
-            }
-
-            peer = new Peer(); // Auto ID
+            if (peer) { try { peer.destroy(); } catch(e){} }
+            peer = new Peer();
             peer.on('open', () => {
                 hostConnection = peer.connect(hostPeerId);
-                
                 hostConnection.on('open', () => {
                     updateConnectionBadge('emerald', 'Terhubung ke PC');
-                    showToast("Berhasil terhubung ke PC Utama!", "success");
+                    showToast("Terhubung ke PC Utama!", "success");
                 });
-
-                hostConnection.on('data', (data) => {
-                    handleIncomingData(data);
-                });
-
-                hostConnection.on('close', () => {
-                    updateConnectionBadge('amber', 'Terputus dari PC');
-                });
+                hostConnection.on('data', (data) => handleIncomingData(data));
+                hostConnection.on('close', () => updateConnectionBadge('amber', 'Terputus dari PC'));
             });
         }
 
-        function broadcastStateChange() {
-            // Broadcast to all clients if Host
-            activeConnections.forEach(conn => {
-                if (conn.open) {
-                    conn.send({ type: 'SYNC_STATE', state: window.appState });
-                }
-            });
+        // Send network state throttled (Max 20 times per second) to prevent network congestion
+        function broadcastStateChange(force = false) {
+            const now = Date.now();
+            if (!force && (now - lastBroadcastTime < 50)) return;
+            lastBroadcastTime = now;
 
-            // Send to Host if Client
+            const payload = { type: 'SYNC_STATE', state: window.appState };
+
+            activeConnections.forEach(conn => {
+                if (conn.open) conn.send(payload);
+            });
             if (hostConnection && hostConnection.open) {
-                hostConnection.send({ type: 'SYNC_STATE', state: window.appState });
+                hostConnection.send(payload);
             }
         }
 
@@ -658,9 +546,8 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             if (data && data.type === 'SYNC_STATE' && data.state) {
                 const incoming = data.state;
                 
-                // Update local app state
                 window.appState.scriptText = incoming.scriptText;
-                window.appState.scrollPercent = incoming.scrollPercent;
+                window.appState.targetScrollPercent = incoming.targetScrollPercent;
                 window.appState.isPlaying = incoming.isPlaying;
                 window.appState.speed = incoming.speed;
                 window.appState.fontSize = incoming.fontSize;
@@ -671,18 +558,14 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
                 window.appState.mirrorV = incoming.mirrorV;
                 window.appState.focusLine = incoming.focusLine;
 
-                // Render UI
                 document.getElementById('scriptTextarea').value = incoming.scriptText;
                 document.getElementById('inputSpeed').value = incoming.speed;
-                document.getElementById('speedValueDisplay').innerText = incoming.speed + ' px/frame';
+                document.getElementById('speedValueDisplay').innerText = incoming.speed + ' px/s';
                 document.getElementById('previewSpeedDisplay').innerText = incoming.speed + ' px';
-
                 document.getElementById('inputFontSize').value = incoming.fontSize;
                 document.getElementById('fontSizeDisplay').innerText = incoming.fontSize + 'px';
-
                 document.getElementById('inputLineHeight').value = incoming.lineHeight;
                 document.getElementById('lineHeightDisplay').innerText = incoming.lineHeight;
-
                 document.getElementById('selectTheme').value = incoming.theme;
                 document.getElementById('toggleFocusLine').checked = incoming.focusLine;
 
@@ -694,112 +577,96 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
                 applyMirrorStyles();
                 applyFocusLineStyles();
                 updatePlayIcons();
-                applyScrollPositionFromPercent(incoming.scrollPercent);
             }
         }
 
-        // Room Management
-        window.joinRoom = function(roomCode) {
-            if (!roomCode) return;
-            // Strict 6 characters
-            roomCode = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-            if (roomCode.length < 6) {
-                roomCode = (roomCode + 'XXXXXX').slice(0, 6);
-            }
-
-            window.appState.roomId = roomCode;
-
-            document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
-            document.getElementById('displayRoomCode').innerText = roomCode;
-            document.getElementById('inputRoomCode').value = roomCode;
-
-            generateQRCode(roomCode);
-            initPeerCloud(roomCode);
-            showToast(`Ruangan Terhubung: ${roomCode}`, "info");
-        };
-
-        // Scroll Animation Loop Engine (RequestAnimationFrame)
-        let animationFrameId = null;
-
+        // BUTTERY SMOOTH ANIMATION ENGINE (Lerp + RequestAnimationFrame)
         function startAnimationLoop() {
-            function loop() {
-                if (window.appState && window.appState.isPlaying) {
-                    performAutoScroll();
+            function renderLoop() {
+                const pcContainer = document.getElementById('promptContainer');
+                const mobileContainer = document.getElementById('mobilePromptContainer');
+
+                const activeContainer = window.appState.isController ? pcContainer : mobileContainer;
+                
+                if (activeContainer) {
+                    const maxScroll = activeContainer.scrollHeight - activeContainer.clientHeight;
+
+                    if (maxScroll > 0) {
+                        // 1. Auto-scroll step if playing
+                        if (window.appState.isPlaying) {
+                            // Convert speed factor into percent increment
+                            const speedDelta = (window.appState.speed * 0.4) / maxScroll;
+                            window.appState.targetScrollPercent = Math.min(1.0, window.appState.targetScrollPercent + speedDelta);
+                            
+                            if (window.appState.targetScrollPercent >= 1.0) {
+                                window.appState.isPlaying = false;
+                                updatePlayIcons();
+                            }
+                            broadcastStateChange();
+                        }
+
+                        // 2. Linear Interpolation (Lerp) for ultra-smooth movement on PC & Mobile
+                        const lerpFactor = 0.2; // Smoothness multiplier
+                        const diff = window.appState.targetScrollPercent - window.appState.currentScrollPercent;
+                        
+                        if (Math.abs(diff) > 0.00001) {
+                            window.appState.currentScrollPercent += diff * lerpFactor;
+                        } else {
+                            window.appState.currentScrollPercent = window.appState.targetScrollPercent;
+                        }
+
+                        // 3. Apply smooth scroll position to containers
+                        const targetPixels = window.appState.currentScrollPercent * maxScroll;
+                        
+                        if (pcContainer) pcContainer.scrollTop = targetPixels;
+                        if (mobileContainer) mobileContainer.scrollTop = targetPixels;
+
+                        // 4. Update UI Percent Indicators
+                        const displayPercent = Math.round(window.appState.currentScrollPercent * 100);
+                        document.getElementById('scrollProgressPercent').innerText = displayPercent + '%';
+                        document.getElementById('inputScrollProgress').value = Math.round(window.appState.currentScrollPercent * 1000);
+                    }
                 }
-                animationFrameId = requestAnimationFrame(loop);
+
+                requestAnimationFrame(renderLoop);
             }
-            loop();
+            requestAnimationFrame(renderLoop);
         }
 
-        function performAutoScroll() {
-            const container = getActivePromptContainer();
-            if (!container) return;
+        // Manual Scroll Inputs (Wheel, Touch, Slider)
+        function setupManualScrollHandlers() {
+            const pcContainer = document.getElementById('promptContainer');
+            const mobileContainer = document.getElementById('mobilePromptContainer');
 
-            const maxScroll = container.scrollHeight - container.clientHeight;
-            if (maxScroll <= 0) return;
-
-            container.scrollTop += window.appState.speed * 0.5;
-            
-            const newPercent = container.scrollTop / maxScroll;
-            window.appState.scrollPercent = newPercent;
-            
-            const slider = document.getElementById('inputScrollProgress');
-            if (slider) slider.value = Math.round(newPercent * 100);
-            document.getElementById('scrollProgressPercent').innerText = Math.round(newPercent * 100) + '%';
-
-            broadcastStateChange();
-        }
-
-        function handleLocalScroll() {
-            const container = getActivePromptContainer();
-            if (!container) return;
-
-            const maxScroll = container.scrollHeight - container.clientHeight;
-            if (maxScroll <= 0) return;
-
-            const percent = container.scrollTop / maxScroll;
-            window.appState.scrollPercent = percent;
-
-            document.getElementById('inputScrollProgress').value = Math.round(percent * 100);
-            document.getElementById('scrollProgressPercent').innerText = Math.round(percent * 100) + '%';
-
-            broadcastStateChange();
-        }
-
-        function applyScrollPositionFromPercent(percent) {
-            const containers = [
-                document.getElementById('promptContainer'),
-                document.getElementById('mobilePromptContainer')
-            ];
-
-            containers.forEach(container => {
-                if (!container) return;
+            function handleWheel(e) {
+                e.preventDefault();
+                const container = e.currentTarget;
                 const maxScroll = container.scrollHeight - container.clientHeight;
-                if (maxScroll > 0) {
-                    container.scrollTop = percent * maxScroll;
-                }
-            });
+                if (maxScroll <= 0) return;
 
-            document.getElementById('inputScrollProgress').value = Math.round(percent * 100);
-            document.getElementById('scrollProgressPercent').innerText = Math.round(percent * 100) + '%';
+                const scrollDelta = (e.deltaY * 0.8) / maxScroll;
+                window.appState.targetScrollPercent = Math.max(0, Math.min(1, window.appState.targetScrollPercent + scrollDelta));
+                broadcastStateChange();
+            }
+
+            if (pcContainer) pcContainer.addEventListener('wheel', handleWheel, { passive: false });
+            if (mobileContainer) mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
         }
 
-        function getActivePromptContainer() {
-            return window.appState.isController 
-                ? document.getElementById('promptContainer')
-                : document.getElementById('mobilePromptContainer');
+        function onManualSliderInput(val) {
+            window.appState.targetScrollPercent = val / 1000;
+            broadcastStateChange();
         }
 
-        // Playback Control Functions
+        // Playback Control
         function togglePlay() {
             window.appState.isPlaying = !window.appState.isPlaying;
             updatePlayIcons();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function updatePlayIcons() {
             const isPlaying = window.appState.isPlaying;
-            
             const mainIcon = document.getElementById('playIcon');
             const mainLabel = document.getElementById('playBtnLabel');
             const previewIcon = document.getElementById('previewPlayIcon');
@@ -819,17 +686,10 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
         }
 
         function resetScroll() {
-            window.appState.scrollPercent = 0;
-            applyScrollPositionFromPercent(0);
-            broadcastStateChange();
-            showToast("Scroll di-reset ke paling atas", "info");
-        }
-
-        function manualScrollSlider(val) {
-            const percent = val / 100;
-            window.appState.scrollPercent = percent;
-            applyScrollPositionFromPercent(percent);
-            broadcastStateChange();
+            window.appState.targetScrollPercent = 0;
+            window.appState.currentScrollPercent = 0;
+            broadcastStateChange(true);
+            showToast("Scroll di-reset ke atas", "info");
         }
 
         function startCountdownAndPlay() {
@@ -856,12 +716,12 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             }, 1000);
         }
 
-        // Adjustments & Styling Update Functions
+        // Settings Adjustments
         function updateSpeed(val) {
             window.appState.speed = parseInt(val);
-            document.getElementById('speedValueDisplay').innerText = val + ' px/frame';
+            document.getElementById('speedValueDisplay').innerText = val + ' px/s';
             document.getElementById('previewSpeedDisplay').innerText = val + ' px';
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function changeSpeed(delta) {
@@ -874,7 +734,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             window.appState.fontSize = parseInt(val);
             document.getElementById('fontSizeDisplay').innerText = val + 'px';
             applyFontSizeStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyFontSizeStyles() {
@@ -887,7 +747,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             window.appState.lineHeight = parseFloat(val);
             document.getElementById('lineHeightDisplay').innerText = val;
             applyLineHeightStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyLineHeightStyles() {
@@ -898,7 +758,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
         function updateTextAlign(align) {
             window.appState.textAlign = align;
             applyTextAlignStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyTextAlignStyles() {
@@ -909,11 +769,9 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             ['left', 'center', 'right'].forEach(a => {
                 const btn = document.getElementById(`align${a.charAt(0).toUpperCase() + a.slice(1)}Btn`);
                 if (btn) {
-                    if (a === align) {
-                        btn.className = "flex-1 py-1 rounded text-xs bg-brand-600 text-white font-bold";
-                    } else {
-                        btn.className = "flex-1 py-1 rounded text-xs text-slate-400 hover:text-white";
-                    }
+                    btn.className = (a === align)
+                        ? "flex-1 py-1 rounded text-xs bg-brand-600 text-white font-bold"
+                        : "flex-1 py-1 rounded text-xs text-slate-400";
                 }
             });
         }
@@ -921,34 +779,25 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
         function updateTheme(themeName) {
             window.appState.theme = themeName;
             applyThemeStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyThemeStyles() {
             const theme = window.appState.theme;
-            const promptBox = document.getElementById('promptContainer');
-            const mobileBox = document.getElementById('mobilePromptContainer');
-
-            [promptBox, mobileBox].forEach(box => {
-                if (!box) return;
-                box.className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
-            });
+            document.getElementById('promptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
+            document.getElementById('mobilePromptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
         }
 
         function toggleMirror(type) {
             if (type === 'h') window.appState.mirrorH = !window.appState.mirrorH;
             if (type === 'v') window.appState.mirrorV = !window.appState.mirrorV;
-
             applyMirrorStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyMirrorStyles() {
             const h = window.appState.mirrorH;
             const v = window.appState.mirrorV;
-
-            const text1 = document.getElementById('promptTextDisplay');
-            const text2 = document.getElementById('mobilePromptTextDisplay');
 
             let transformStr = '';
             if (h && v) transformStr = 'scale(-1, -1)';
@@ -956,20 +805,19 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             else if (v) transformStr = 'scaleY(-1)';
             else transformStr = 'none';
 
-            text1.style.transform = transformStr;
-            text2.style.transform = transformStr;
+            document.getElementById('promptTextDisplay').style.transform = transformStr;
+            document.getElementById('mobilePromptTextDisplay').style.transform = transformStr;
 
             const btnH = document.getElementById('btnMirrorH');
             const btnV = document.getElementById('btnMirrorV');
-
-            if (btnH) btnH.className = h ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition" : "py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition";
-            if (btnV) btnV.className = v ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition" : "py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition";
+            if (btnH) btnH.className = h ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2" : "py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2";
+            if (btnV) btnV.className = v ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2" : "py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2";
         }
 
         function updateFocusLineToggle(checked) {
             window.appState.focusLine = checked;
             applyFocusLineStyles();
-            broadcastStateChange();
+            broadcastStateChange(true);
         }
 
         function applyFocusLineStyles() {
@@ -984,7 +832,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             }
         }
 
-        // Script Editor Inputs & Presets
+        // Script Editor
         function onScriptInputChange(val) {
             window.appState.scriptText = val;
             updateTextDisplays();
@@ -1014,7 +862,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             showToast("Naskah contoh dimuat", "info");
         }
 
-        // View Mode Switcher
+        // Navigation Mode Switch
         function switchViewMode(mode) {
             const controllerView = document.getElementById('controllerView');
             const displayView = document.getElementById('displayView');
@@ -1025,55 +873,34 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
                 window.appState.isController = true;
                 controllerView.classList.remove('hidden');
                 displayView.classList.add('hidden');
-
                 btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
                 btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
             } else {
                 window.appState.isController = false;
                 controllerView.classList.add('hidden');
                 displayView.classList.remove('hidden');
-
                 btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
                 btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
             }
         }
 
-        // Keyboard Shortcuts
+        // Keyboard Controls
         function setupKeyboardShortcuts() {
             window.addEventListener('keydown', (e) => {
-                if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
-                    return;
-                }
+                if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-                if (e.code === 'Space') {
-                    e.preventDefault();
-                    togglePlay();
-                } else if (e.code === 'ArrowUp') {
-                    e.preventDefault();
-                    changeSpeed(1);
-                } else if (e.code === 'ArrowDown') {
-                    e.preventDefault();
-                    changeSpeed(-1);
-                } else if (e.code === 'KeyR') {
-                    e.preventDefault();
-                    resetScroll();
-                } else if (e.code === 'KeyM') {
-                    e.preventDefault();
-                    toggleMirror('h');
-                } else if (e.code === 'KeyF') {
-                    e.preventDefault();
-                    toggleFullscreen();
-                }
+                if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+                else if (e.code === 'ArrowUp') { e.preventDefault(); changeSpeed(1); }
+                else if (e.code === 'ArrowDown') { e.preventDefault(); changeSpeed(-1); }
+                else if (e.code === 'KeyR') { e.preventDefault(); resetScroll(); }
+                else if (e.code === 'KeyM') { e.preventDefault(); toggleMirror('h'); }
+                else if (e.code === 'KeyF') { e.preventDefault(); toggleFullscreen(); }
             });
         }
 
-        // Room Modals & QR Generator
-        function openRoomModal() {
-            document.getElementById('roomModal').classList.remove('hidden');
-        }
-        function closeRoomModal() {
-            document.getElementById('roomModal').classList.add('hidden');
-        }
+        // Room Modals & QR Code
+        function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); }
+        function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); }
 
         function createNewRoom() {
             const newCode = generate6CharRoomCode();
@@ -1089,6 +916,21 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             }
         }
 
+        window.joinRoom = function(roomCode) {
+            if (!roomCode) return;
+            roomCode = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+            if (roomCode.length < 6) roomCode = (roomCode + 'XXXXXX').slice(0, 6);
+
+            window.appState.roomId = roomCode;
+            document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
+            document.getElementById('displayRoomCode').innerText = roomCode;
+            document.getElementById('inputRoomCode').value = roomCode;
+
+            generateQRCode(roomCode);
+            initPeerCloud(roomCode);
+            showToast(`Ruangan: ${roomCode}`, "info");
+        };
+
         function generateQRCode(roomCode) {
             const qrWrapper = document.getElementById('qrCodeWrapper');
             const qrCanvas = document.getElementById('qrcodeCanvas');
@@ -1097,8 +939,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             qrCanvas.innerHTML = '';
             qrText.innerText = roomCode;
 
-            const currentUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${currentUrl}?room=${roomCode}&mode=display`;
+            const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}&mode=display`;
 
             if (typeof QRCode !== 'undefined') {
                 new QRCode(qrCanvas, {
@@ -1114,13 +955,9 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
         }
 
         function copyShareLink() {
-            const currentUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${currentUrl}?room=${window.appState.roomId}&mode=display`;
-
+            const shareUrl = `${window.location.origin}${window.location.pathname}?room=${window.appState.roomId}&mode=display`;
             if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    showToast("Tautan HP berhasil disalin!", "success");
-                });
+                navigator.clipboard.writeText(shareUrl).then(() => showToast("Tautan disalin!", "success"));
             } else {
                 const dummy = document.createElement('input');
                 document.body.appendChild(dummy);
@@ -1128,14 +965,13 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
                 dummy.select();
                 document.execCommand('copy');
                 document.body.removeChild(dummy);
-                showToast("Tautan HP berhasil disalin!", "success");
+                showToast("Tautan disalin!", "success");
             }
         }
 
         function updateConnectionBadge(status, text) {
             const dot = document.getElementById('statusDot');
             const txt = document.getElementById('statusText');
-
             if (status === 'emerald') {
                 dot.className = "w-2 h-2 rounded-full bg-emerald-400";
                 txt.innerText = text;
@@ -1149,55 +985,41 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
 
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.warn(`Error full screen: ${err.message}`);
-                });
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
             }
         }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-
             let bgClass = 'bg-slate-800 border-slate-700 text-slate-100';
             let iconClass = 'fa-circle-info text-sky-400';
 
             if (type === 'success') {
                 bgClass = 'bg-slate-900 border-emerald-500/40 text-emerald-100';
                 iconClass = 'fa-circle-check text-emerald-400';
-            } else if (type === 'error') {
-                bgClass = 'bg-slate-900 border-rose-500/40 text-rose-100';
-                iconClass = 'fa-triangle-exclamation text-rose-400';
             }
 
             toast.className = `px-4 py-3 rounded-xl border shadow-2xl flex items-center gap-2.5 text-xs font-semibold backdrop-blur transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${bgClass}`;
             toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${message}</span>`;
 
             container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Initialize App on Load
+        // App Init
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             const modeParam = urlParams.get('mode');
 
-            if (modeParam === 'display') {
-                switchViewMode('display');
-            }
+            if (modeParam === 'display') switchViewMode('display');
 
             const initialRoom = roomParam ? roomParam.toUpperCase().slice(0, 6) : generate6CharRoomCode();
             joinRoom(initialRoom);
@@ -1205,6 +1027,7 @@ Cobalah untuk mengubah kecepatan scroll atau mengedit teks naskah ini dari panel
             document.getElementById('scriptTextarea').value = window.appState.scriptText;
             updateTextDisplays();
             setupKeyboardShortcuts();
+            setupManualScrollHandlers();
             startAnimationLoop();
         });
     </script>
