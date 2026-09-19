@@ -16,7 +16,7 @@ Hari ini kita kedatangan smartphone flagship terbaru yang punya kamera super jer
 Layarnya mengusung AMOLED 120Hz yang sangat responsif, cocok untuk bernavigasi harian maupun bermain game berat.`
 };
 
-// App State with Dual Targets for Smooth Lerp Motion
+// App State dengan Dual Targets untuk Pergerakan Lerp yang Mulus
 window.appState = {
     roomId: '',
     isController: true,
@@ -45,6 +45,7 @@ let peer = null;
 let activeConnections = [];
 let hostConnection = null;
 let lastBroadcastTime = 0;
+let activeCountdownTimer = null;
 
 function generate6CharRoomCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -56,7 +57,9 @@ function generate6CharRoomCode() {
 }
 
 function formatRoomInput(input) {
-    input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    if (input) {
+        input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    }
 }
 
 // WebRTC Sync Initialization
@@ -108,7 +111,7 @@ function connectAsClient(hostPeerId) {
     });
 }
 
-// Send network state throttled (Max 20 times per second)
+// Kirim state ke jaringan (Maksimal 20x per detik)
 function broadcastStateChange(force = false) {
     const now = Date.now();
     if (!force && (now - lastBroadcastTime < 50)) return;
@@ -117,7 +120,7 @@ function broadcastStateChange(force = false) {
     const payload = { type: 'SYNC_STATE', state: window.appState };
 
     activeConnections.forEach(conn => {
-        if (conn.open) conn.send(payload);
+        if (conn && conn.open) conn.send(payload);
     });
     if (hostConnection && hostConnection.open) {
         hostConnection.send(payload);
@@ -127,6 +130,9 @@ function broadcastStateChange(force = false) {
 function handleIncomingData(data) {
     if (data && data.type === 'SYNC_STATE' && data.state) {
         const incoming = data.state;
+        
+        // Simpan peran lokal agar tidak tertimpa state jarak jauh
+        const currentLocalRole = window.appState.isController;
         
         window.appState.scriptText = incoming.scriptText;
         window.appState.targetScrollPercent = incoming.targetScrollPercent;
@@ -140,16 +146,40 @@ function handleIncomingData(data) {
         window.appState.mirrorV = incoming.mirrorV;
         window.appState.focusLine = incoming.focusLine;
 
-        document.getElementById('scriptTextarea').value = incoming.scriptText;
-        document.getElementById('inputSpeed').value = incoming.speed;
-        document.getElementById('speedValueDisplay').innerText = incoming.speed + ' px/s';
-        document.getElementById('previewSpeedDisplay').innerText = incoming.speed + ' px';
-        document.getElementById('inputFontSize').value = incoming.fontSize;
-        document.getElementById('fontSizeDisplay').innerText = incoming.fontSize + 'px';
-        document.getElementById('inputLineHeight').value = incoming.lineHeight;
-        document.getElementById('lineHeightDisplay').innerText = incoming.lineHeight;
-        document.getElementById('selectTheme').value = incoming.theme;
-        document.getElementById('toggleFocusLine').checked = incoming.focusLine;
+        // Pertahankan status controller lokal
+        window.appState.isController = currentLocalRole;
+
+        const scriptArea = document.getElementById('scriptTextarea');
+        if (scriptArea && scriptArea.value !== incoming.scriptText) {
+            scriptArea.value = incoming.scriptText;
+        }
+
+        const inputSpeed = document.getElementById('inputSpeed');
+        if (inputSpeed) inputSpeed.value = incoming.speed;
+        
+        const speedValDisp = document.getElementById('speedValueDisplay');
+        if (speedValDisp) speedValDisp.innerText = incoming.speed + ' px/s';
+        
+        const prevSpeedDisp = document.getElementById('previewSpeedDisplay');
+        if (prevSpeedDisp) prevSpeedDisp.innerText = incoming.speed + ' px';
+
+        const inputFont = document.getElementById('inputFontSize');
+        if (inputFont) inputFont.value = incoming.fontSize;
+
+        const fontDisp = document.getElementById('fontSizeDisplay');
+        if (fontDisp) fontDisp.innerText = incoming.fontSize + 'px';
+
+        const inputLine = document.getElementById('inputLineHeight');
+        if (inputLine) inputLine.value = incoming.lineHeight;
+
+        const lineDisp = document.getElementById('lineHeightDisplay');
+        if (lineDisp) lineDisp.innerText = incoming.lineHeight;
+
+        const selTheme = document.getElementById('selectTheme');
+        if (selTheme) selTheme.value = incoming.theme;
+
+        const chkFocus = document.getElementById('toggleFocusLine');
+        if (chkFocus) chkFocus.checked = incoming.focusLine;
 
         updateTextDisplays();
         applyFontSizeStyles();
@@ -162,20 +192,19 @@ function handleIncomingData(data) {
     }
 }
 
-// BUTTERY SMOOTH ANIMATION ENGINE (Lerp)
+// MESIN ANIMASI PERGERAKAN TEKS (Lerp)
 function startAnimationLoop() {
     function renderLoop() {
         const pcContainer = document.getElementById('promptContainer');
         const mobileContainer = document.getElementById('mobilePromptContainer');
-
         const activeContainer = window.appState.isController ? pcContainer : mobileContainer;
         
         if (activeContainer) {
             const maxScroll = activeContainer.scrollHeight - activeContainer.clientHeight;
 
             if (maxScroll > 0) {
-                // 1. Auto-scroll step if playing
-                if (window.appState.isPlaying) {
+                // 1. Auto-scroll step (HANYA Controller yang menambah targetScrollPercent)
+                if (window.appState.isPlaying && window.appState.isController) {
                     const speedDelta = (window.appState.speed * 0.4) / maxScroll;
                     window.appState.targetScrollPercent = Math.min(1.0, window.appState.targetScrollPercent + speedDelta);
                     
@@ -186,7 +215,7 @@ function startAnimationLoop() {
                     broadcastStateChange();
                 }
 
-                // 2. Linear Interpolation (Lerp)
+                // 2. Linear Interpolation (Lerp) untuk semua perangkat
                 const lerpFactor = 0.2;
                 const diff = window.appState.targetScrollPercent - window.appState.currentScrollPercent;
                 
@@ -196,16 +225,19 @@ function startAnimationLoop() {
                     window.appState.currentScrollPercent = window.appState.targetScrollPercent;
                 }
 
-                // 3. Apply position
+                // 3. Terapkan posisi scroll
                 const targetPixels = window.appState.currentScrollPercent * maxScroll;
                 
                 if (pcContainer) pcContainer.scrollTop = targetPixels;
                 if (mobileContainer) mobileContainer.scrollTop = targetPixels;
 
-                // 4. Update UI Indicators
+                // 4. Update Indikator UI
                 const displayPercent = Math.round(window.appState.currentScrollPercent * 100);
-                document.getElementById('scrollProgressPercent').innerText = displayPercent + '%';
-                document.getElementById('inputScrollProgress').value = Math.round(window.appState.currentScrollPercent * 1000);
+                const progressText = document.getElementById('scrollProgressPercent');
+                const progressInput = document.getElementById('inputScrollProgress');
+                
+                if (progressText) progressText.innerText = displayPercent + '%';
+                if (progressInput) progressInput.value = Math.round(window.appState.currentScrollPercent * 1000);
             }
         }
 
@@ -231,7 +263,15 @@ function setupManualScrollHandlers() {
     }
 
     if (pcContainer) pcContainer.addEventListener('wheel', handleWheel, { passive: false });
-    if (mobileContainer) mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
+    if (mobileContainer) {
+        mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
+        // Mencegah tarik layar fisik pada HP di Mode Display yang bentrok dengan Lerp
+        mobileContainer.addEventListener('touchmove', (e) => {
+            if (!window.appState.isController) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    }
 }
 
 function onManualSliderInput(val) {
@@ -276,19 +316,26 @@ function resetScroll() {
 function startCountdownAndPlay() {
     const overlay = document.getElementById('countdownOverlay');
     const numberEl = document.getElementById('countdownNumber');
+    
+    if (!overlay || !numberEl) return;
+    
+    // Hentikan timer sebelumnya jika sedang berjalan
+    if (activeCountdownTimer) clearInterval(activeCountdownTimer);
+    
     overlay.classList.remove('hidden');
 
     let count = 3;
     numberEl.innerText = count;
 
-    const timer = setInterval(() => {
+    activeCountdownTimer = setInterval(() => {
         count--;
         if (count > 0) {
             numberEl.innerText = count;
         } else if (count === 0) {
             numberEl.innerText = "GO!";
         } else {
-            clearInterval(timer);
+            clearInterval(activeCountdownTimer);
+            activeCountdownTimer = null;
             overlay.classList.add('hidden');
             if (!window.appState.isPlaying) {
                 togglePlay();
@@ -300,40 +347,49 @@ function startCountdownAndPlay() {
 // Settings Adjustments
 function updateSpeed(val) {
     window.appState.speed = parseInt(val);
-    document.getElementById('speedValueDisplay').innerText = val + ' px/s';
-    document.getElementById('previewSpeedDisplay').innerText = val + ' px';
+    const speedValDisp = document.getElementById('speedValueDisplay');
+    const prevSpeedDisp = document.getElementById('previewSpeedDisplay');
+    if (speedValDisp) speedValDisp.innerText = val + ' px/s';
+    if (prevSpeedDisp) prevSpeedDisp.innerText = val + ' px';
     broadcastStateChange(true);
 }
 
 function changeSpeed(delta) {
     let newSpeed = Math.max(1, Math.min(15, window.appState.speed + delta));
-    document.getElementById('inputSpeed').value = newSpeed;
+    const inputSpeed = document.getElementById('inputSpeed');
+    if (inputSpeed) inputSpeed.value = newSpeed;
     updateSpeed(newSpeed);
 }
 
 function updateFontSize(val) {
     window.appState.fontSize = parseInt(val);
-    document.getElementById('fontSizeDisplay').innerText = val + 'px';
+    const fontDisp = document.getElementById('fontSizeDisplay');
+    if (fontDisp) fontDisp.innerText = val + 'px';
     applyFontSizeStyles();
     broadcastStateChange(true);
 }
 
 function applyFontSizeStyles() {
     const fontPx = window.appState.fontSize + 'px';
-    document.getElementById('promptTextDisplay').style.fontSize = fontPx;
-    document.getElementById('mobilePromptTextDisplay').style.fontSize = fontPx;
+    const text1 = document.getElementById('promptTextDisplay');
+    const text2 = document.getElementById('mobilePromptTextDisplay');
+    if (text1) text1.style.fontSize = fontPx;
+    if (text2) text2.style.fontSize = fontPx;
 }
 
 function updateLineHeight(val) {
     window.appState.lineHeight = parseFloat(val);
-    document.getElementById('lineHeightDisplay').innerText = val;
+    const lineDisp = document.getElementById('lineHeightDisplay');
+    if (lineDisp) lineDisp.innerText = val;
     applyLineHeightStyles();
     broadcastStateChange(true);
 }
 
 function applyLineHeightStyles() {
-    document.getElementById('promptTextDisplay').style.lineHeight = window.appState.lineHeight;
-    document.getElementById('mobilePromptTextDisplay').style.lineHeight = window.appState.lineHeight;
+    const text1 = document.getElementById('promptTextDisplay');
+    const text2 = document.getElementById('mobilePromptTextDisplay');
+    if (text1) text1.style.lineHeight = window.appState.lineHeight;
+    if (text2) text2.style.lineHeight = window.appState.lineHeight;
 }
 
 function updateTextAlign(align) {
@@ -344,8 +400,10 @@ function updateTextAlign(align) {
 
 function applyTextAlignStyles() {
     const align = window.appState.textAlign;
-    document.getElementById('promptTextDisplay').style.textAlign = align;
-    document.getElementById('mobilePromptTextDisplay').style.textAlign = align;
+    const text1 = document.getElementById('promptTextDisplay');
+    const text2 = document.getElementById('mobilePromptTextDisplay');
+    if (text1) text1.style.textAlign = align;
+    if (text2) text2.style.textAlign = align;
 
     ['left', 'center', 'right'].forEach(a => {
         const btn = document.getElementById(`align${a.charAt(0).toUpperCase() + a.slice(1)}Btn`);
@@ -365,8 +423,11 @@ function updateTheme(themeName) {
 
 function applyThemeStyles() {
     const theme = window.appState.theme;
-    document.getElementById('promptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
-    document.getElementById('mobilePromptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
+    const pcContainer = document.getElementById('promptContainer');
+    const mobileContainer = document.getElementById('mobilePromptContainer');
+    
+    if (pcContainer) pcContainer.className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
+    if (mobileContainer) mobileContainer.className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
 }
 
 function toggleMirror(type) {
@@ -386,8 +447,10 @@ function applyMirrorStyles() {
     else if (v) transformStr = 'scaleY(-1)';
     else transformStr = 'none';
 
-    document.getElementById('promptTextDisplay').style.transform = transformStr;
-    document.getElementById('mobilePromptTextDisplay').style.transform = transformStr;
+    const text1 = document.getElementById('promptTextDisplay');
+    const text2 = document.getElementById('mobilePromptTextDisplay');
+    if (text1) text1.style.transform = transformStr;
+    if (text2) text2.style.transform = transformStr;
 
     const btnH = document.getElementById('btnMirrorH');
     const btnV = document.getElementById('btnMirrorV');
@@ -405,11 +468,11 @@ function applyFocusLineStyles() {
     const line1 = document.getElementById('focusLineOverlay');
     const line2 = document.getElementById('mobileFocusLineOverlay');
     if (window.appState.focusLine) {
-        line1.classList.remove('hidden');
-        line2.classList.remove('hidden');
+        if (line1) line1.classList.remove('hidden');
+        if (line2) line2.classList.remove('hidden');
     } else {
-        line1.classList.add('hidden');
-        line2.classList.add('hidden');
+        if (line1) line1.classList.add('hidden');
+        if (line2) line2.classList.add('hidden');
     }
 }
 
@@ -422,23 +485,31 @@ function onScriptInputChange(val) {
 
 function updateTextDisplays() {
     const text = window.appState.scriptText || 'Teks kosong...';
-    document.getElementById('promptTextDisplay').innerText = text;
-    document.getElementById('mobilePromptTextDisplay').innerText = text;
+    const text1 = document.getElementById('promptTextDisplay');
+    const text2 = document.getElementById('mobilePromptTextDisplay');
+    
+    if (text1) text1.innerText = text;
+    if (text2) text2.innerText = text;
 
     const words = text.trim() ? text.trim().split(/\s+/).length : 0;
     const chars = text.length;
-    document.getElementById('wordCountDisplay').innerText = words;
-    document.getElementById('charCountDisplay').innerText = chars;
+    
+    const wordDisp = document.getElementById('wordCountDisplay');
+    const charDisp = document.getElementById('charCountDisplay');
+    if (wordDisp) wordDisp.innerText = words;
+    if (charDisp) charDisp.innerText = chars;
 
     const minutes = Math.floor(words / 150);
     const seconds = Math.floor((words % 150) / 2.5);
-    document.getElementById('estTimeDisplay').innerText = `${minutes}m ${seconds}s`;
+    const estTime = document.getElementById('estTimeDisplay');
+    if (estTime) estTime.innerText = `${minutes}m ${seconds}s`;
 }
 
 function loadPresetScript(key) {
     if (!key || !presetScripts[key]) return;
     const script = presetScripts[key];
-    document.getElementById('scriptTextarea').value = script;
+    const scriptArea = document.getElementById('scriptTextarea');
+    if (scriptArea) scriptArea.value = script;
     onScriptInputChange(script);
     showToast("Naskah contoh dimuat", "info");
 }
@@ -452,26 +523,24 @@ function switchViewMode(mode) {
 
     if (mode === 'controller') {
         window.appState.isController = true;
-        controllerView.classList.remove('hidden');
-        displayView.classList.add('hidden');
-        btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
-        btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+        if (controllerView) controllerView.classList.remove('hidden');
+        if (displayView) displayView.classList.add('hidden');
+        if (btnCtrl) btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
+        if (btnDisp) btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
     } else {
         window.appState.isController = false;
-        controllerView.classList.add('hidden');
-        displayView.classList.remove('hidden');
-        btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
-        btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+        if (controllerView) controllerView.classList.add('hidden');
+        if (displayView) displayView.classList.remove('hidden');
+        if (btnDisp) btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
+        if (btnCtrl) btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
     }
 }
 
 // KEYBOARD & SAMSUNG S PEN CONTROLS
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
-        // Jangan jalankan jika user sedang fokus mengetik naskah
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-        // Deteksi Tombol S Pen (Samsung Note 10 / Galaxy Tab) & Keyboard
         const isPlayToggle = [
             'Space',
             'MediaPlayPause',
@@ -490,7 +559,7 @@ function setupKeyboardShortcuts() {
 
         if (isPlayToggle || e.keyCode === 179) {
             e.preventDefault();
-            togglePlay(); // ON / OFF Auto-Scroll
+            togglePlay();
         }
         else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
             e.preventDefault(); 
@@ -507,8 +576,15 @@ function setupKeyboardShortcuts() {
 }
 
 // Room Modals & QR Code
-function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); }
-function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); }
+function openRoomModal() { 
+    const modal = document.getElementById('roomModal');
+    if (modal) modal.classList.remove('hidden'); 
+}
+
+function closeRoomModal() { 
+    const modal = document.getElementById('roomModal');
+    if (modal) modal.classList.add('hidden'); 
+}
 
 function createNewRoom() {
     const newCode = generate6CharRoomCode();
@@ -517,9 +593,9 @@ function createNewRoom() {
 }
 
 function joinRoomFromInput() {
-    const input = document.getElementById('inputRoomCode').value;
-    if (input) {
-        window.joinRoom(input);
+    const input = document.getElementById('inputRoomCode');
+    if (input && input.value) {
+        window.joinRoom(input.value);
         closeRoomModal();
     }
 }
@@ -530,9 +606,14 @@ window.joinRoom = function(roomCode) {
     if (roomCode.length < 6) roomCode = (roomCode + 'XXXXXX').slice(0, 6);
 
     window.appState.roomId = roomCode;
-    document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
-    document.getElementById('displayRoomCode').innerText = roomCode;
-    document.getElementById('inputRoomCode').value = roomCode;
+    
+    const curRoomDisp = document.getElementById('currentRoomCodeDisplay');
+    const dispRoomCode = document.getElementById('displayRoomCode');
+    const inputRoomCode = document.getElementById('inputRoomCode');
+
+    if (curRoomDisp) curRoomDisp.innerText = roomCode;
+    if (dispRoomCode) dispRoomCode.innerText = roomCode;
+    if (inputRoomCode) inputRoomCode.value = roomCode;
 
     generateQRCode(roomCode);
     initPeerCloud(roomCode);
@@ -544,8 +625,9 @@ function generateQRCode(roomCode) {
     const qrCanvas = document.getElementById('qrcodeCanvas');
     const qrText = document.getElementById('qrRoomCodeText');
     
+    if (!qrCanvas) return;
     qrCanvas.innerHTML = '';
-    qrText.innerText = roomCode;
+    if (qrText) qrText.innerText = roomCode;
 
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}&mode=display`;
 
@@ -558,7 +640,7 @@ function generateQRCode(roomCode) {
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.H
         });
-        qrWrapper.classList.remove('hidden');
+        if (qrWrapper) qrWrapper.classList.remove('hidden');
     }
 }
 
@@ -580,6 +662,8 @@ function copyShareLink() {
 function updateConnectionBadge(status, text) {
     const dot = document.getElementById('statusDot');
     const txt = document.getElementById('statusText');
+    if (!dot || !txt) return;
+
     if (status === 'emerald') {
         dot.className = "w-2 h-2 rounded-full bg-emerald-400";
         txt.innerText = text;
@@ -601,6 +685,8 @@ function toggleFullscreen() {
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
+    if (!container) return;
+
     const toast = document.createElement('div');
     let bgClass = 'bg-slate-800 border-slate-700 text-slate-100';
     let iconClass = 'fa-circle-info text-sky-400';
@@ -632,7 +718,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const initialRoom = roomParam ? roomParam.toUpperCase().slice(0, 6) : generate6CharRoomCode();
     joinRoom(initialRoom);
 
-    document.getElementById('scriptTextarea').value = window.appState.scriptText;
+    const scriptArea = document.getElementById('scriptTextarea');
+    if (scriptArea) scriptArea.value = window.appState.scriptText;
+
     updateTextDisplays();
     setupKeyboardShortcuts();
     setupManualScrollHandlers();
