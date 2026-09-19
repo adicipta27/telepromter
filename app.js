@@ -1,646 +1,640 @@
-// ==========================================
-// 1. FIREBASE CONFIGURATION & INITIALIZATION
-// ==========================================
+const presetScripts = {
+    speech: `PIDATO SAMBUTAN RESMI
+Assalamu'alaikum Warahmatullahi Wabarakatuh,
+Selamat pagi dan salam sejahtera untuk kita semua.
 
-const firebaseConfig = {
-    apiKey: "AIzaSyA3Moun-wccgJsCEUmpua4RPKtp44SDvuI",
-    authDomain: "telesync-pro.firebaseapp.com",
-    projectId: "telesync-pro",
-    storageBucket: "telesync-pro.firebasestorage.app",
-    messagingSenderId: "122378796127",
-    appId: "1:122378796127:web:3c3e4ec9139452f977afea"
+Yang saya hormati jajaran direksi serta seluruh tim yang hadir pada pagi hari ini.
+Marilah kita panjatkan puji dan syukur karena dapat berkumpul dalam acara ini.
+
+Mari kita terus melangkah maju dengan semangat inovasi dan kolaborasi untuk mencapai target yang lebih besar!`,
+
+    tech: `REVIEW GADGET & TEKNOLOGI
+Halo semuanya, kembali lagi di channel kami!
+
+Hari ini kita kedatangan smartphone flagship terbaru yang punya kamera super jernih.
+
+Layarnya mengusung AMOLED 120Hz yang sangat responsif, cocok untuk bernavigasi harian maupun bermain game berat.`
 };
 
-let db = null;
-if (typeof firebase !== 'undefined') {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    db = firebase.firestore();
-}
+// App State with Dual Targets for Smooth Lerp Motion
+window.appState = {
+    roomId: '',
+    isController: true,
+    scriptText: `Selamat datang di TeleSync PRO!
 
-let loadedScriptsCache = [];
-let activeFilterCategory = 'all';
+Anda sekarang bisa menekan tombol S Pen (Samsung Note 10) untuk Mulai / Jeda Auto Scroll!
 
-// ==========================================
-// 2. GLOBAL APP STATE & VARIABLES
-// ==========================================
+Layar ini juga sudah disempurnakan agar pergerakan scroll manual dan auto scroll tetap mulus tanpa terloncat.`,
+    
+    // High Precision Scroll Targets (0.0 to 1.0)
+    targetScrollPercent: 0,
+    currentScrollPercent: 0,
+    
+    isPlaying: false,
+    speed: 3,
+    fontSize: 42,
+    lineHeight: 1.6,
+    textAlign: 'center',
+    theme: 'theme-dark',
+    mirrorH: false,
+    mirrorV: false,
+    focusLine: true
+};
 
-let isScrolling = false;
-let scrollSpeed = 3;
-let fontSize = 48;
-let mirrorH = false;
-let mirrorV = false;
-let guideLineVisible = false;
-let animationFrameId = null;
-
-// PeerJS Remote Sync State
 let peer = null;
-let conn = null;
-let isRemoteUpdate = false;
+let activeConnections = [];
+let hostConnection = null;
+let lastBroadcastTime = 0;
 
-// ==========================================
-// 3. INITIALIZATION ON DOM READY
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Set tampilan awal dari textarea
-    const textarea = document.getElementById('scriptTextarea');
-    if (textarea) {
-        onScriptInputChange(textarea.value);
+function generate6CharRoomCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = 'TS';
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    
-    // Inisialisasi PeerJS untuk koneksi remote
-    initPeerJS();
-});
-
-// ==========================================
-// 4. TELEPROMPTER CORE ENGINE (SCROLLING & UI)
-// ==========================================
-
-function togglePlayPause(fromRemote = false) {
-    isScrolling = !isScrolling;
-    updatePlayPauseUI();
-
-    if (isScrolling) {
-        startScrollingLoop();
-    } else {
-        stopScrollingLoop();
-    }
-
-    if (!fromRemote) {
-        broadcastData({ type: 'TOGGLE_PLAY', isScrolling });
-    }
+    return code.substring(0, 6);
 }
 
-function updatePlayPauseUI() {
-    const btn = document.getElementById('btnPlayPause');
-    const icon = document.getElementById('iconPlayPause');
-    const label = document.getElementById('labelPlayPause');
-
-    if (isScrolling) {
-        if (btn) btn.className = "px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-lg shadow-amber-600/20";
-        if (icon) icon.className = "fa-solid fa-pause";
-        if (label) label.innerText = "PAUSE";
-    } else {
-        if (btn) btn.className = "px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-lg shadow-emerald-600/20";
-        if (icon) icon.className = "fa-solid fa-play";
-        if (label) label.innerText = "MULAI";
-    }
+function formatRoomInput(input) {
+    input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 }
 
-function startScrollingLoop() {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+// WebRTC Sync Initialization
+function initPeerCloud(roomCode) {
+    if (peer) { try { peer.destroy(); } catch(e){} }
+    updateConnectionBadge('amber', 'Menghubungkan Cloud...');
+    const peerId = 'telesync-' + roomCode.toLowerCase();
 
-    function step() {
-        if (!isScrolling) return;
+    peer = new Peer(peerId, { debug: 1 });
 
-        const viewport = document.getElementById('prompterViewport');
-        if (viewport) {
-            viewport.scrollTop += (scrollSpeed * 0.4);
-            
-            // Mengirim posisi scroll ke device remote
-            broadcastData({ type: 'SCROLL_POS', scrollTop: viewport.scrollTop });
+    peer.on('open', (id) => {
+        updateConnectionBadge('emerald', 'Cloud Terhubung (Host)');
+    });
+
+    peer.on('connection', (conn) => {
+        activeConnections.push(conn);
+        conn.on('open', () => {
+            conn.send({ type: 'SYNC_STATE', state: window.appState });
+            showToast("Perangkat HP terhubung!", "success");
+            updateConnectionBadge('emerald', `Cloud (${activeConnections.length} Terhubung)`);
+        });
+        conn.on('data', (data) => handleIncomingData(data));
+        conn.on('close', () => {
+            activeConnections = activeConnections.filter(c => c !== conn);
+            updateConnectionBadge('emerald', activeConnections.length > 0 ? `Cloud (${activeConnections.length} Terhubung)` : 'Cloud Terhubung');
+        });
+    });
+
+    peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+            connectAsClient(peerId);
+        } else {
+            updateConnectionBadge('amber', 'Cloud Active');
         }
-        animationFrameId = requestAnimationFrame(step);
-    }
-
-    animationFrameId = requestAnimationFrame(step);
+    });
 }
 
-function stopScrollingLoop() {
-    if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-    }
+function connectAsClient(hostPeerId) {
+    if (peer) { try { peer.destroy(); } catch(e){} }
+    peer = new Peer();
+    peer.on('open', () => {
+        hostConnection = peer.connect(hostPeerId);
+        hostConnection.on('open', () => {
+            updateConnectionBadge('emerald', 'Terhubung ke PC');
+            showToast("Terhubung ke PC Utama!", "success");
+        });
+        hostConnection.on('data', (data) => handleIncomingData(data));
+        hostConnection.on('close', () => updateConnectionBadge('amber', 'Terputus dari PC'));
+    });
 }
 
-function resetScroll(fromRemote = false) {
-    const viewport = document.getElementById('prompterViewport');
-    if (viewport) {
-        viewport.scrollTop = 0;
-    }
-    if (!fromRemote) {
-        broadcastData({ type: 'RESET_SCROLL' });
-    }
-}
+// Send network state throttled (Max 20 times per second)
+function broadcastStateChange(force = false) {
+    const now = Date.now();
+    if (!force && (now - lastBroadcastTime < 50)) return;
+    lastBroadcastTime = now;
 
-function updateSpeed(val, fromRemote = false) {
-    scrollSpeed = parseFloat(val);
-    const speedValEl = document.getElementById('speedVal');
-    const slider = document.getElementById('speedSlider');
-    
-    if (speedValEl) speedValEl.innerText = scrollSpeed;
-    if (slider) slider.value = scrollSpeed;
+    const payload = { type: 'SYNC_STATE', state: window.appState };
 
-    if (!fromRemote) {
-        broadcastData({ type: 'SET_SPEED', val: scrollSpeed });
+    activeConnections.forEach(conn => {
+        if (conn.open) conn.send(payload);
+    });
+    if (hostConnection && hostConnection.open) {
+        hostConnection.send(payload);
     }
 }
 
-function updateFontSize(val, fromRemote = false) {
-    fontSize = parseInt(val);
-    const fontSizeValEl = document.getElementById('fontSizeVal');
-    const slider = document.getElementById('fontSizeSlider');
-    const display = document.getElementById('prompterTextDisplay');
+function handleIncomingData(data) {
+    if (data && data.type === 'SYNC_STATE' && data.state) {
+        const incoming = data.state;
+        
+        window.appState.scriptText = incoming.scriptText;
+        window.appState.targetScrollPercent = incoming.targetScrollPercent;
+        window.appState.isPlaying = incoming.isPlaying;
+        window.appState.speed = incoming.speed;
+        window.appState.fontSize = incoming.fontSize;
+        window.appState.lineHeight = incoming.lineHeight;
+        window.appState.textAlign = incoming.textAlign;
+        window.appState.theme = incoming.theme;
+        window.appState.mirrorH = incoming.mirrorH;
+        window.appState.mirrorV = incoming.mirrorV;
+        window.appState.focusLine = incoming.focusLine;
 
-    if (fontSizeValEl) fontSizeValEl.innerText = `${fontSize}px`;
-    if (slider) slider.value = fontSize;
-    if (display) display.style.fontSize = `${fontSize}px`;
+        document.getElementById('scriptTextarea').value = incoming.scriptText;
+        document.getElementById('inputSpeed').value = incoming.speed;
+        document.getElementById('speedValueDisplay').innerText = incoming.speed + ' px/s';
+        document.getElementById('previewSpeedDisplay').innerText = incoming.speed + ' px';
+        document.getElementById('inputFontSize').value = incoming.fontSize;
+        document.getElementById('fontSizeDisplay').innerText = incoming.fontSize + 'px';
+        document.getElementById('inputLineHeight').value = incoming.lineHeight;
+        document.getElementById('lineHeightDisplay').innerText = incoming.lineHeight;
+        document.getElementById('selectTheme').value = incoming.theme;
+        document.getElementById('toggleFocusLine').checked = incoming.focusLine;
 
-    if (!fromRemote) {
-        broadcastData({ type: 'SET_FONT_SIZE', val: fontSize });
+        updateTextDisplays();
+        applyFontSizeStyles();
+        applyLineHeightStyles();
+        applyTextAlignStyles();
+        applyThemeStyles();
+        applyMirrorStyles();
+        applyFocusLineStyles();
+        updatePlayIcons();
     }
+}
+
+// BUTTERY SMOOTH ANIMATION ENGINE (Lerp)
+function startAnimationLoop() {
+    function renderLoop() {
+        const pcContainer = document.getElementById('promptContainer');
+        const mobileContainer = document.getElementById('mobilePromptContainer');
+
+        const activeContainer = window.appState.isController ? pcContainer : mobileContainer;
+        
+        if (activeContainer) {
+            const maxScroll = activeContainer.scrollHeight - activeContainer.clientHeight;
+
+            if (maxScroll > 0) {
+                // 1. Auto-scroll step if playing
+                if (window.appState.isPlaying) {
+                    const speedDelta = (window.appState.speed * 0.4) / maxScroll;
+                    window.appState.targetScrollPercent = Math.min(1.0, window.appState.targetScrollPercent + speedDelta);
+                    
+                    if (window.appState.targetScrollPercent >= 1.0) {
+                        window.appState.isPlaying = false;
+                        updatePlayIcons();
+                    }
+                    broadcastStateChange();
+                }
+
+                // 2. Linear Interpolation (Lerp)
+                const lerpFactor = 0.2;
+                const diff = window.appState.targetScrollPercent - window.appState.currentScrollPercent;
+                
+                if (Math.abs(diff) > 0.00001) {
+                    window.appState.currentScrollPercent += diff * lerpFactor;
+                } else {
+                    window.appState.currentScrollPercent = window.appState.targetScrollPercent;
+                }
+
+                // 3. Apply position
+                const targetPixels = window.appState.currentScrollPercent * maxScroll;
+                
+                if (pcContainer) pcContainer.scrollTop = targetPixels;
+                if (mobileContainer) mobileContainer.scrollTop = targetPixels;
+
+                // 4. Update UI Indicators
+                const displayPercent = Math.round(window.appState.currentScrollPercent * 100);
+                document.getElementById('scrollProgressPercent').innerText = displayPercent + '%';
+                document.getElementById('inputScrollProgress').value = Math.round(window.appState.currentScrollPercent * 1000);
+            }
+        }
+
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+}
+
+// Manual Scroll Handlers
+function setupManualScrollHandlers() {
+    const pcContainer = document.getElementById('promptContainer');
+    const mobileContainer = document.getElementById('mobilePromptContainer');
+
+    function handleWheel(e) {
+        e.preventDefault();
+        const container = e.currentTarget;
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        if (maxScroll <= 0) return;
+
+        const scrollDelta = (e.deltaY * 0.8) / maxScroll;
+        window.appState.targetScrollPercent = Math.max(0, Math.min(1, window.appState.targetScrollPercent + scrollDelta));
+        broadcastStateChange();
+    }
+
+    if (pcContainer) pcContainer.addEventListener('wheel', handleWheel, { passive: false });
+    if (mobileContainer) mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
+}
+
+function onManualSliderInput(val) {
+    window.appState.targetScrollPercent = val / 1000;
+    broadcastStateChange();
+}
+
+// Playback Control
+function togglePlay() {
+    window.appState.isPlaying = !window.appState.isPlaying;
+    updatePlayIcons();
+    broadcastStateChange(true);
+}
+
+function updatePlayIcons() {
+    const isPlaying = window.appState.isPlaying;
+    const mainIcon = document.getElementById('playIcon');
+    const mainLabel = document.getElementById('playBtnLabel');
+    const previewIcon = document.getElementById('previewPlayIcon');
+    const mobileIcon = document.getElementById('mobilePlayIcon');
+
+    if (isPlaying) {
+        if (mainIcon) mainIcon.className = "fa-solid fa-pause text-lg";
+        if (mainLabel) mainLabel.innerText = "JEDA (Spasi / S Pen)";
+        if (previewIcon) previewIcon.className = "fa-solid fa-pause";
+        if (mobileIcon) mobileIcon.className = "fa-solid fa-pause";
+    } else {
+        if (mainIcon) mainIcon.className = "fa-solid fa-play text-lg";
+        if (mainLabel) mainLabel.innerText = "MULAI (Spasi / S Pen)";
+        if (previewIcon) previewIcon.className = "fa-solid fa-play";
+        if (mobileIcon) mobileIcon.className = "fa-solid fa-play";
+    }
+}
+
+function resetScroll() {
+    window.appState.targetScrollPercent = 0;
+    window.appState.currentScrollPercent = 0;
+    broadcastStateChange(true);
+    showToast("Scroll di-reset ke atas", "info");
+}
+
+function startCountdownAndPlay() {
+    const overlay = document.getElementById('countdownOverlay');
+    const numberEl = document.getElementById('countdownNumber');
+    overlay.classList.remove('hidden');
+
+    let count = 3;
+    numberEl.innerText = count;
+
+    const timer = setInterval(() => {
+        count--;
+        if (count > 0) {
+            numberEl.innerText = count;
+        } else if (count === 0) {
+            numberEl.innerText = "GO!";
+        } else {
+            clearInterval(timer);
+            overlay.classList.add('hidden');
+            if (!window.appState.isPlaying) {
+                togglePlay();
+            }
+        }
+    }, 1000);
+}
+
+// Settings Adjustments
+function updateSpeed(val) {
+    window.appState.speed = parseInt(val);
+    document.getElementById('speedValueDisplay').innerText = val + ' px/s';
+    document.getElementById('previewSpeedDisplay').innerText = val + ' px';
+    broadcastStateChange(true);
+}
+
+function changeSpeed(delta) {
+    let newSpeed = Math.max(1, Math.min(15, window.appState.speed + delta));
+    document.getElementById('inputSpeed').value = newSpeed;
+    updateSpeed(newSpeed);
+}
+
+function updateFontSize(val) {
+    window.appState.fontSize = parseInt(val);
+    document.getElementById('fontSizeDisplay').innerText = val + 'px';
+    applyFontSizeStyles();
+    broadcastStateChange(true);
+}
+
+function applyFontSizeStyles() {
+    const fontPx = window.appState.fontSize + 'px';
+    document.getElementById('promptTextDisplay').style.fontSize = fontPx;
+    document.getElementById('mobilePromptTextDisplay').style.fontSize = fontPx;
+}
+
+function updateLineHeight(val) {
+    window.appState.lineHeight = parseFloat(val);
+    document.getElementById('lineHeightDisplay').innerText = val;
+    applyLineHeightStyles();
+    broadcastStateChange(true);
+}
+
+function applyLineHeightStyles() {
+    document.getElementById('promptTextDisplay').style.lineHeight = window.appState.lineHeight;
+    document.getElementById('mobilePromptTextDisplay').style.lineHeight = window.appState.lineHeight;
+}
+
+function updateTextAlign(align) {
+    window.appState.textAlign = align;
+    applyTextAlignStyles();
+    broadcastStateChange(true);
+}
+
+function applyTextAlignStyles() {
+    const align = window.appState.textAlign;
+    document.getElementById('promptTextDisplay').style.textAlign = align;
+    document.getElementById('mobilePromptTextDisplay').style.textAlign = align;
+
+    ['left', 'center', 'right'].forEach(a => {
+        const btn = document.getElementById(`align${a.charAt(0).toUpperCase() + a.slice(1)}Btn`);
+        if (btn) {
+            btn.className = (a === align)
+                ? "flex-1 py-1 rounded text-xs bg-brand-600 text-white font-bold"
+                : "flex-1 py-1 rounded text-xs text-slate-400";
+        }
+    });
+}
+
+function updateTheme(themeName) {
+    window.appState.theme = themeName;
+    applyThemeStyles();
+    broadcastStateChange(true);
+}
+
+function applyThemeStyles() {
+    const theme = window.appState.theme;
+    document.getElementById('promptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
+    document.getElementById('mobilePromptContainer').className = `flex-1 overflow-y-auto relative no-scrollbar select-none ${theme}`;
 }
 
 function toggleMirror(type) {
-    const display = document.getElementById('prompterTextDisplay');
+    if (type === 'h') window.appState.mirrorH = !window.appState.mirrorH;
+    if (type === 'v') window.appState.mirrorV = !window.appState.mirrorV;
+    applyMirrorStyles();
+    broadcastStateChange(true);
+}
+
+function applyMirrorStyles() {
+    const h = window.appState.mirrorH;
+    const v = window.appState.mirrorV;
+
+    let transformStr = '';
+    if (h && v) transformStr = 'scale(-1, -1)';
+    else if (h) transformStr = 'scaleX(-1)';
+    else if (v) transformStr = 'scaleY(-1)';
+    else transformStr = 'none';
+
+    document.getElementById('promptTextDisplay').style.transform = transformStr;
+    document.getElementById('mobilePromptTextDisplay').style.transform = transformStr;
+
     const btnH = document.getElementById('btnMirrorH');
     const btnV = document.getElementById('btnMirrorV');
+    if (btnH) btnH.className = h ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2" : "py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2";
+    if (btnV) btnV.className = v ? "py-2 px-3 bg-brand-600 text-white border border-brand-500 rounded-xl text-xs font-semibold flex items-center justify-center gap-2" : "py-2 px-3 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2";
+}
 
-    if (type === 'h') mirrorH = !mirrorH;
-    if (type === 'v') mirrorV = !mirrorV;
+function updateFocusLineToggle(checked) {
+    window.appState.focusLine = checked;
+    applyFocusLineStyles();
+    broadcastStateChange(true);
+}
 
-    if (display) {
-        let transformStr = '';
-        if (mirrorH && mirrorV) transformStr = 'scale(-1, -1)';
-        else if (mirrorH) transformStr = 'scaleX(-1)';
-        else if (mirrorV) transformStr = 'scaleY(-1)';
-        else transformStr = 'none';
-
-        display.style.transform = transformStr;
-    }
-
-    if (btnH) {
-        btnH.className = mirrorH 
-            ? "p-2 bg-sky-600 text-white rounded-xl transition border border-sky-500" 
-            : "p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition border border-slate-700";
-    }
-    if (btnV) {
-        btnV.className = mirrorV 
-            ? "p-2 bg-sky-600 text-white rounded-xl transition border border-sky-500" 
-            : "p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition border border-slate-700";
+function applyFocusLineStyles() {
+    const line1 = document.getElementById('focusLineOverlay');
+    const line2 = document.getElementById('mobileFocusLineOverlay');
+    if (window.appState.focusLine) {
+        line1.classList.remove('hidden');
+        line2.classList.remove('hidden');
+    } else {
+        line1.classList.add('hidden');
+        line2.classList.add('hidden');
     }
 }
 
-function toggleGuideLine() {
-    guideLineVisible = !guideLineVisible;
-    const line = document.getElementById('readingGuideLine');
-    const btn = document.getElementById('btnGuideLine');
+// Script Editor
+function onScriptInputChange(val) {
+    window.appState.scriptText = val;
+    updateTextDisplays();
+    broadcastStateChange();
+}
 
-    if (line) {
-        if (guideLineVisible) {
-            line.classList.remove('hidden');
-            line.className = "absolute left-0 right-0 top-1/2 -translate-y-1/2 h-12 bg-sky-500/10 border-y-2 border-sky-500/40 pointer-events-none z-10";
-        } else {
-            line.classList.add('hidden');
-        }
+function updateTextDisplays() {
+    const text = window.appState.scriptText || 'Teks kosong...';
+    document.getElementById('promptTextDisplay').innerText = text;
+    document.getElementById('mobilePromptTextDisplay').innerText = text;
+
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const chars = text.length;
+    document.getElementById('wordCountDisplay').innerText = words;
+    document.getElementById('charCountDisplay').innerText = chars;
+
+    const minutes = Math.floor(words / 150);
+    const seconds = Math.floor((words % 150) / 2.5);
+    document.getElementById('estTimeDisplay').innerText = `${minutes}m ${seconds}s`;
+}
+
+function loadPresetScript(key) {
+    if (!key || !presetScripts[key]) return;
+    const script = presetScripts[key];
+    document.getElementById('scriptTextarea').value = script;
+    onScriptInputChange(script);
+    showToast("Naskah contoh dimuat", "info");
+}
+
+// Navigation Mode Switch
+function switchViewMode(mode) {
+    const controllerView = document.getElementById('controllerView');
+    const displayView = document.getElementById('displayView');
+    const btnCtrl = document.getElementById('btnModeController');
+    const btnDisp = document.getElementById('btnModeDisplay');
+
+    if (mode === 'controller') {
+        window.appState.isController = true;
+        controllerView.classList.remove('hidden');
+        displayView.classList.add('hidden');
+        btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
+        btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+    } else {
+        window.appState.isController = false;
+        controllerView.classList.add('hidden');
+        displayView.classList.remove('hidden');
+        btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
+        btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
     }
+}
 
-    if (btn) {
-        btn.className = guideLineVisible 
-            ? "p-2 bg-sky-600 text-white rounded-xl transition border border-sky-500" 
-            : "p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition border border-slate-700";
+// KEYBOARD & SAMSUNG S PEN CONTROLS
+function setupKeyboardShortcuts() {
+    window.addEventListener('keydown', (e) => {
+        // Jangan jalankan jika user sedang fokus mengetik naskah
+        if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+        // Deteksi Tombol S Pen (Samsung Note 10 / Galaxy Tab) & Keyboard
+        const isPlayToggle = [
+            'Space',
+            'MediaPlayPause',
+            'MediaPlay',
+            'MediaPause',
+            'TrackNext',
+            'TrackPrevious',
+            'VolumeUp',
+            'VolumeDown'
+        ].includes(e.code) || [
+            'MediaPlayPause',
+            'MediaPlay',
+            'MediaPause',
+            'Unidentified'
+        ].includes(e.key);
+
+        if (isPlayToggle || e.keyCode === 179) {
+            e.preventDefault();
+            togglePlay(); // ON / OFF Auto-Scroll
+        }
+        else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
+            e.preventDefault(); 
+            changeSpeed(1); 
+        }
+        else if (e.code === 'ArrowDown' || e.code === 'PageDown') { 
+            e.preventDefault(); 
+            changeSpeed(-1); 
+        }
+        else if (e.code === 'KeyR') { e.preventDefault(); resetScroll(); }
+        else if (e.code === 'KeyM') { e.preventDefault(); toggleMirror('h'); }
+        else if (e.code === 'KeyF') { e.preventDefault(); toggleFullscreen(); }
+    });
+}
+
+// Room Modals & QR Code
+function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); }
+function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); }
+
+function createNewRoom() {
+    const newCode = generate6CharRoomCode();
+    window.joinRoom(newCode);
+    closeRoomModal();
+}
+
+function joinRoomFromInput() {
+    const input = document.getElementById('inputRoomCode').value;
+    if (input) {
+        window.joinRoom(input);
+        closeRoomModal();
+    }
+}
+
+window.joinRoom = function(roomCode) {
+    if (!roomCode) return;
+    roomCode = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    if (roomCode.length < 6) roomCode = (roomCode + 'XXXXXX').slice(0, 6);
+
+    window.appState.roomId = roomCode;
+    document.getElementById('currentRoomCodeDisplay').innerText = roomCode;
+    document.getElementById('displayRoomCode').innerText = roomCode;
+    document.getElementById('inputRoomCode').value = roomCode;
+
+    generateQRCode(roomCode);
+    initPeerCloud(roomCode);
+    showToast(`Ruangan: ${roomCode}`, "info");
+};
+
+function generateQRCode(roomCode) {
+    const qrWrapper = document.getElementById('qrCodeWrapper');
+    const qrCanvas = document.getElementById('qrcodeCanvas');
+    const qrText = document.getElementById('qrRoomCodeText');
+    
+    qrCanvas.innerHTML = '';
+    qrText.innerText = roomCode;
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}&mode=display`;
+
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(qrCanvas, {
+            text: shareUrl,
+            width: 140,
+            height: 140,
+            colorDark : "#0f172a",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        qrWrapper.classList.remove('hidden');
+    }
+}
+
+function copyShareLink() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${window.appState.roomId}&mode=display`;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(shareUrl).then(() => showToast("Tautan disalin!", "success"));
+    } else {
+        const dummy = document.createElement('input');
+        document.body.appendChild(dummy);
+        dummy.value = shareUrl;
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        showToast("Tautan disalin!", "success");
+    }
+}
+
+function updateConnectionBadge(status, text) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if (status === 'emerald') {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        txt.innerText = text;
+        txt.className = "text-emerald-300 font-semibold";
+    } else {
+        dot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+        txt.innerText = text;
+        txt.className = "text-amber-300 font-semibold";
     }
 }
 
 function toggleFullscreen() {
     if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-            showToast("Tidak dapat mengaktifkan layar penuh", "info");
-        });
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else if (document.exitFullscreen) {
+        document.exitFullscreen();
     }
 }
-
-function onScriptInputChange(text, fromRemote = false) {
-    const wordCountEl = document.getElementById('wordCount');
-    const charCountEl = document.getElementById('charCount');
-    const displayEl = document.getElementById('prompterTextDisplay');
-
-    const words = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
-    const chars = text ? text.length : 0;
-
-    if (wordCountEl) wordCountEl.innerHTML = `<i class="fa-solid fa-file-word mr-1"></i>${words} kata`;
-    if (charCountEl) charCountEl.innerText = `${chars} karakter`;
-
-    if (displayEl) {
-        displayEl.innerHTML = parseVisualCues(text || "Ketik naskah di sini...");
-    }
-
-    if (!fromRemote) {
-        broadcastData({ type: 'UPDATE_TEXT', text });
-    }
-}
-
-function clearEditor() {
-    if (confirm("Apakah Anda yakin ingin mengosongkan editor naskah?")) {
-        const textarea = document.getElementById('scriptTextarea');
-        if (textarea) {
-            textarea.value = '';
-            onScriptInputChange('');
-        }
-    }
-}
-
-// Visual Cues Parser: [teks dalam kurung] -> warna abu-abu / instruksi
-function parseVisualCues(text) {
-    if (!text) return '';
-    let escaped = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-    // Format [teks dalam kurung]
-    return escaped.replace(/\[(.*?)\]/g, '<span class="cue-tag">[$1]</span>');
-}
-
-// ==========================================
-// 5. WEBRTC REMOTE CONTROL (PEERJS) ENGINE
-// ==========================================
-
-function initPeerJS() {
-    // Inisialisasi PeerJS dengan ID acak
-    const randomId = 'telesync-' + Math.floor(1000 + Math.random() * 9000);
-    peer = new Peer(randomId);
-
-    peer.on('open', (id) => {
-        const myIdInput = document.getElementById('myPeerId');
-        if (myIdInput) myIdInput.value = id;
-    });
-
-    peer.on('connection', (connection) => {
-        conn = connection;
-        setupConnectionListeners();
-        updateSyncStatusBadge(true, conn.peer);
-        showToast("Terhubung dengan device remote!", "success");
-    });
-
-    peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
-        showToast("Gagal menghubungkan remote WebRTC", "error");
-    });
-}
-
-function connectToPeer() {
-    const targetIdInput = document.getElementById('targetPeerId');
-    if (!targetIdInput || !targetIdInput.value.trim()) {
-        showToast("Masukkan ID Room tujuan terlebih dahulu!", "info");
-        return;
-    }
-
-    const targetId = targetIdInput.value.trim();
-    conn = peer.connect(targetId);
-    setupConnectionListeners();
-
-    conn.on('open', () => {
-        updateSyncStatusBadge(true, targetId);
-        closeRoomModal();
-        showToast("Tersambung ke " + targetId, "success");
-    });
-}
-
-function setupConnectionListeners() {
-    if (!conn) return;
-
-    conn.on('data', (data) => {
-        handleRemoteData(data);
-    });
-
-    conn.on('close', () => {
-        updateSyncStatusBadge(false);
-        showToast("Koneksi remote terputus", "info");
-    });
-}
-
-function handleRemoteData(data) {
-    if (!data || !data.type) return;
-
-    switch (data.type) {
-        case 'TOGGLE_PLAY':
-            if (isScrolling !== data.isScrolling) {
-                togglePlayPause(true);
-            }
-            break;
-        case 'SET_SPEED':
-            updateSpeed(data.val, true);
-            break;
-        case 'SET_FONT_SIZE':
-            updateFontSize(data.val, true);
-            break;
-        case 'UPDATE_TEXT':
-            const textarea = document.getElementById('scriptTextarea');
-            if (textarea) {
-                textarea.value = data.text;
-                onScriptInputChange(data.text, true);
-            }
-            break;
-        case 'SCROLL_POS':
-            const viewport = document.getElementById('prompterViewport');
-            if (viewport && !isScrolling) {
-                viewport.scrollTop = data.scrollTop;
-            }
-            break;
-        case 'RESET_SCROLL':
-            resetScroll(true);
-            break;
-    }
-}
-
-function broadcastData(payload) {
-    if (conn && conn.open) {
-        conn.send(payload);
-    }
-}
-
-function updateSyncStatusBadge(isConnected, peerName = '') {
-    const badge = document.getElementById('syncStatusBadge');
-    if (!badge) return;
-
-    if (isConnected) {
-        badge.className = "px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20 flex items-center gap-1";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Connected: ${peerName}`;
-    } else {
-        badge.className = "px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-semibold border border-slate-700 flex items-center gap-1";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Offline`;
-    }
-}
-
-function openRoomModal() {
-    const modal = document.getElementById('roomModal');
-    if (modal) modal.classList.remove('hidden');
-}
-
-function closeRoomModal() {
-    const modal = document.getElementById('roomModal');
-    if (modal) modal.classList.add('hidden');
-}
-
-function copyPeerId() {
-    const myIdInput = document.getElementById('myPeerId');
-    if (myIdInput && myIdInput.value) {
-        navigator.clipboard.writeText(myIdInput.value);
-        showToast("ID Room berhasil disalin!", "success");
-    }
-}
-
-// ==========================================
-// 6. FIREBASE FIRESTORE SCRIPT MANAGEMENT
-// ==========================================
-
-function openFirebaseModal() {
-    const modal = document.getElementById('firebaseModal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        fetchFirebaseScripts();
-    }
-}
-
-function closeFirebaseModal() {
-    const modal = document.getElementById('firebaseModal');
-    if (modal) modal.classList.add('hidden');
-    closeScriptEditorForm();
-}
-
-async function fetchFirebaseScripts() {
-    const listContainer = document.getElementById('firebaseScriptList');
-    if (!db) {
-        if (listContainer) {
-            listContainer.innerHTML = `<div class="col-span-full py-8 text-center text-amber-400 text-xs">Koneksi Firebase Firestore belum siap.</div>`;
-        }
-        return;
-    }
-
-    try {
-        const snapshot = await db.collection('telesync_scripts').orderBy('updatedAt', 'desc').get();
-        loadedScriptsCache = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        renderFirebaseScriptList();
-    } catch (err) {
-        console.error("Gagal mengambil data naskah:", err);
-        if (listContainer) {
-            listContainer.innerHTML = `<div class="col-span-full py-8 text-center text-rose-400 text-xs">Gagal memuat naskah: ${err.message}</div>`;
-        }
-    }
-}
-
-function filterFirebaseCategory(cat) {
-    activeFilterCategory = cat;
-    ['all', 'draft', 'ready', 'completed'].forEach(c => {
-        const btn = document.getElementById(`filterBtn${c.charAt(0).toUpperCase() + c.slice(1)}`);
-        if (btn) {
-            btn.className = (c === cat)
-                ? "px-3 py-1.5 rounded-lg font-semibold bg-sky-600 text-white"
-                : "px-3 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white";
-        }
-    });
-    renderFirebaseScriptList();
-}
-
-function renderFirebaseScriptList() {
-    const listContainer = document.getElementById('firebaseScriptList');
-    if (!listContainer) return;
-
-    let filtered = loadedScriptsCache;
-    if (activeFilterCategory !== 'all') {
-        filtered = loadedScriptsCache.filter(s => s.status === activeFilterCategory);
-    }
-
-    if (filtered.length === 0) {
-        listContainer.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 text-xs">Tidak ada naskah ditemukan pada kategori ini.</div>`;
-        return;
-    }
-
-    listContainer.innerHTML = filtered.map(item => {
-        let statusBadge = '';
-        if (item.status === 'draft') {
-            statusBadge = `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-semibold border border-slate-700">DRAF</span>`;
-        } else if (item.status === 'ready') {
-            statusBadge = `<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold border border-amber-500/20">SIAP SYUTING</span>`;
-        } else if (item.status === 'completed') {
-            statusBadge = `<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20"><i class="fa-solid fa-check mr-1"></i>SELESAI</span>`;
-        }
-
-        const words = item.content ? item.content.trim().split(/\s+/).filter(Boolean).length : 0;
-        const dateStr = item.updatedAt && item.updatedAt.seconds 
-            ? new Date(item.updatedAt.seconds * 1000).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) 
-            : 'Baru saja';
-
-        return `
-        <div class="bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 flex flex-col justify-between transition">
-            <div>
-                <div class="flex items-start justify-between gap-2 mb-1.5">
-                    <h5 class="font-bold text-slate-200 text-xs line-clamp-1">${item.title || 'Tanpa Judul'}</h5>
-                    ${statusBadge}
-                </div>
-                <p class="text-slate-400 text-[11px] line-clamp-2 mb-3 font-mono leading-relaxed">${item.content || ''}</p>
-            </div>
-            
-            <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-500">
-                <div class="flex items-center gap-2">
-                    <span><i class="fa-solid fa-file-word mr-1"></i>${words} kata</span>
-                    <span>•</span>
-                    <span><i class="fa-solid fa-calendar mr-1"></i>${dateStr}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <button onclick="loadScriptToTeleprompter('${item.id}')" title="Buka di Prompter" class="p-1.5 bg-sky-600/20 text-sky-400 hover:bg-sky-600 hover:text-white rounded-lg transition">
-                        <i class="fa-solid fa-play"></i> Buka
-                    </button>
-                    <button onclick="toggleScriptStatus('${item.id}')" title="Ubah Status Syuting" class="p-1.5 bg-slate-800 text-slate-300 hover:text-amber-400 rounded-lg transition">
-                        <i class="fa-solid fa-rotate"></i>
-                    </button>
-                    <button onclick="editFirebaseScript('${item.id}')" title="Edit Naskah" class="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg transition">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button onclick="deleteFirebaseScript('${item.id}')" title="Hapus Naskah" class="p-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-function openScriptEditorForm(data = null) {
-    const formArea = document.getElementById('firebaseFormArea');
-    const formTitle = document.getElementById('formAreaTitle');
-    
-    document.getElementById('fbScriptId').value = data ? data.id : '';
-    document.getElementById('fbScriptTitle').value = data ? data.title : '';
-    document.getElementById('fbScriptStatus').value = data ? data.status : 'draft';
-    document.getElementById('fbScriptCategory').value = data ? (data.category || '') : '';
-    document.getElementById('fbScriptContent').value = data ? data.content : '';
-
-    if (formTitle) formTitle.innerText = data ? 'Edit Naskah Cloud' : 'Tambah Naskah Baru';
-    if (formArea) formArea.classList.remove('hidden');
-}
-
-function closeScriptEditorForm() {
-    const formArea = document.getElementById('firebaseFormArea');
-    if (formArea) formArea.classList.add('hidden');
-}
-
-async function saveFirebaseScript() {
-    const id = document.getElementById('fbScriptId').value;
-    const title = document.getElementById('fbScriptTitle').value.trim();
-    const status = document.getElementById('fbScriptStatus').value;
-    const category = document.getElementById('fbScriptCategory').value.trim();
-    const content = document.getElementById('fbScriptContent').value;
-
-    if (!title) {
-        showToast("Judul naskah wajib diisi!", "info");
-        return;
-    }
-
-    const payload = {
-        title,
-        status,
-        category,
-        content,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-
-    try {
-        if (id) {
-            await db.collection('telesync_scripts').doc(id).update(payload);
-            showToast("Naskah berhasil diperbarui!", "success");
-        } else {
-            payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('telesync_scripts').add(payload);
-            showToast("Naskah baru disimpan di Cloud!", "success");
-        }
-        closeScriptEditorForm();
-        fetchFirebaseScripts();
-    } catch (err) {
-        console.error("Gagal menyimpan ke Firebase:", err);
-        showToast("Gagal menyimpan naskah!", "error");
-    }
-}
-
-function editFirebaseScript(id) {
-    const target = loadedScriptsCache.find(s => s.id === id);
-    if (target) {
-        openScriptEditorForm(target);
-    }
-}
-
-function loadScriptToTeleprompter(id) {
-    const target = loadedScriptsCache.find(s => s.id === id);
-    if (target) {
-        const textarea = document.getElementById('scriptTextarea');
-        if (textarea) {
-            textarea.value = target.content;
-            onScriptInputChange(target.content);
-        }
-        closeFirebaseModal();
-        showToast(`Naskah "${target.title}" dimuat ke prompter!`, "success");
-    }
-}
-
-async function toggleScriptStatus(id) {
-    const target = loadedScriptsCache.find(s => s.id === id);
-    if (!target) return;
-
-    const statusCycle = { 'draft': 'ready', 'ready': 'completed', 'completed': 'draft' };
-    const newStatus = statusCycle[target.status] || 'draft';
-
-    try {
-        await db.collection('telesync_scripts').doc(id).update({
-            status: newStatus,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showToast(`Status naskah diubah!`, "info");
-        fetchFirebaseScripts();
-    } catch (err) {
-        showToast("Gagal memperbarui status", "error");
-    }
-}
-
-async function deleteFirebaseScript(id) {
-    if (!confirm("Apakah Anda yakin ingin menghapus naskah ini dari cloud?")) return;
-
-    try {
-        await db.collection('telesync_scripts').doc(id).delete();
-        showToast("Naskah telah dihapus dari cloud", "info");
-        fetchFirebaseScripts();
-    } catch (err) {
-        showToast("Gagal menghapus naskah", "error");
-    }
-}
-
-// ==========================================
-// 7. TOAST NOTIFICATION SYSTEM
-// ==========================================
 
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
-    if (!container) return;
-
     const toast = document.createElement('div');
-    const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-sky-600';
+    let bgClass = 'bg-slate-800 border-slate-700 text-slate-100';
+    let iconClass = 'fa-circle-info text-sky-400';
 
-    toast.className = `${bgClass} text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl transition-all duration-300 opacity-0 transform translate-y-2 pointer-events-auto flex items-center gap-2`;
-    
-    let iconClass = 'fa-circle-info';
-    if (type === 'success') iconClass = 'fa-circle-check';
-    if (type === 'error') iconClass = 'fa-triangle-exclamation';
+    if (type === 'success') {
+        bgClass = 'bg-slate-900 border-emerald-500/40 text-emerald-100';
+        iconClass = 'fa-circle-check text-emerald-400';
+    }
 
+    toast.className = `px-4 py-3 rounded-xl border shadow-2xl flex items-center gap-2.5 text-xs font-semibold backdrop-blur transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${bgClass}`;
     toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${message}</span>`;
 
     container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.remove('opacity-0', 'translate-y-2');
-    }, 10);
-
+    setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
     setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// App Init
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomParam = urlParams.get('room');
+    const modeParam = urlParams.get('mode');
+
+    if (modeParam === 'display') switchViewMode('display');
+
+    const initialRoom = roomParam ? roomParam.toUpperCase().slice(0, 6) : generate6CharRoomCode();
+    joinRoom(initialRoom);
+
+    document.getElementById('scriptTextarea').value = window.appState.scriptText;
+    updateTextDisplays();
+    setupKeyboardShortcuts();
+    setupManualScrollHandlers();
+    startAnimationLoop();
+});
