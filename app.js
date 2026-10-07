@@ -5,7 +5,7 @@ window.appState = {
     scriptText: `Selamat datang di TeleSync PRO!
 
 Tekan tombol S Pen Anda:
-- Klik 1x: Mulai / Pause Auto Scroll (via S Pen Scroll Down)
+- Klik 1x (Scroll Down/Up): Mulai / Pause Auto Scroll (Berfungsi penuh di PC & HP Mode Display)
 
 Layar ini sudah disesuaikan dengan posisi kontrol di kiri bawah dan tetap mulus tanpa terloncat.`,
     
@@ -228,7 +228,7 @@ function startAnimationLoop() {
     requestAnimationFrame(renderLoop);
 }
 
-// Handler Wheel / Scroll S Pen (Single Press = Scroll Down -> Toggle Play/Pause)
+// Handler Wheel / Scroll S Pen (Dukungan penuh untuk PC & HP Mode Display)
 function setupManualScrollHandlers() {
     const pcContainer = document.getElementById('promptContainer');
     const mobileContainer = document.getElementById('mobilePromptContainer');
@@ -236,7 +236,7 @@ function setupManualScrollHandlers() {
     function handleWheel(e) {
         e.preventDefault();
         
-        // Sinyal scroll dari S Pen (Single Press / Double Press) akan memicu Toggle Play/Pause
+        // Begitu S Pen diklik (mengirim sinyal scroll down/up), langsung Toggle Play/Pause
         togglePlay();
 
         const container = e.currentTarget;
@@ -249,7 +249,18 @@ function setupManualScrollHandlers() {
     }
 
     if (pcContainer) pcContainer.addEventListener('wheel', handleWheel, { passive: false });
-    if (mobileContainer) mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
+    
+    if (mobileContainer) {
+        mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    // Listener global untuk menangkap event scroll S Pen di HP/Rig saat mode Display aktif
+    document.addEventListener('wheel', (e) => {
+        if (!window.appState.isController) {
+            e.preventDefault();
+            togglePlay();
+        }
+    }, { passive: false });
 }
 
 function onManualSliderInput(val) {
