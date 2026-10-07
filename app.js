@@ -4,9 +4,9 @@ window.appState = {
     isController: true,
     scriptText: `Selamat datang di TeleSync PRO!
 
-Anda sekarang bisa menekan tombol S Pen (Samsung Note 10) untuk Mulai / Jeda Auto Scroll!
+Anda sekarang bisa menekan tombol S Pen untuk Mulai / Jeda Auto Scroll!
 
-Layar ini juga sudah disempurnakan agar pergerakan scroll manual dan auto scroll tetap mulus tanpa terloncat.`,
+Layar ini sudah disesuaikan dengan posisi kontrol di kiri bawah dan tetap mulus tanpa terloncat.`,
     
     targetScrollPercent: 0,
     currentScrollPercent: 0,
@@ -276,6 +276,11 @@ function updatePlayIcons() {
         if (previewIcon) previewIcon.className = "fa-solid fa-play";
         if (mobileIcon) mobileIcon.className = "fa-solid fa-play";
     }
+
+    // Update MediaSession Playback State agar S Pen mendengarkan status aktif
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
 }
 
 function resetScroll() {
@@ -470,6 +475,37 @@ function switchViewMode(mode) {
     }
 }
 
+// Inisialisasi MediaSession API agar S Pen Bluetooth langsung terhubung ke browser
+function setupMediaSessionHandlers() {
+    if ('mediaSession' in navigator) {
+        try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: "TeleSync PRO Prompter",
+                artist: "Live Teleprompter",
+                album: "Studio Session"
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (!window.appState.isPlaying) togglePlay();
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                if (window.appState.isPlaying) togglePlay();
+            });
+
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                resetScroll();
+            });
+
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                togglePlay();
+            });
+        } catch (err) {
+            console.log("MediaSession API error:", err);
+        }
+    }
+}
+
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
@@ -635,6 +671,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('scriptTextarea').value = window.appState.scriptText;
     updateTextDisplays();
     setupKeyboardShortcuts();
+    setupMediaSessionHandlers(); // Mengaktifkan listener S Pen Bluetooth
     setupManualScrollHandlers();
     startAnimationLoop();
 });
