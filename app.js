@@ -4,7 +4,9 @@ window.appState = {
     isController: true,
     scriptText: `Selamat datang di TeleSync PRO!
 
-Anda sekarang bisa menekan tombol S Pen untuk Mulai / Jeda Auto Scroll!
+Tekan tombol S Pen Anda:
+- Klik 1x: Mulai Auto Scroll
+- Klik 1x lagi: Pause / Jeda
 
 Layar ini sudah disesuaikan dengan posisi kontrol di kiri bawah dan tetap mulus tanpa terloncat.`,
     
@@ -277,7 +279,6 @@ function updatePlayIcons() {
         if (mobileIcon) mobileIcon.className = "fa-solid fa-play";
     }
 
-    // Update MediaSession Playback State agar S Pen mendengarkan status aktif
     if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
     }
@@ -475,7 +476,7 @@ function switchViewMode(mode) {
     }
 }
 
-// Inisialisasi MediaSession API agar S Pen Bluetooth langsung terhubung ke browser
+// MediaSession API Handler untuk S Pen Bluetooth Play/Pause
 function setupMediaSessionHandlers() {
     if ('mediaSession' in navigator) {
         try {
@@ -506,6 +507,7 @@ function setupMediaSessionHandlers() {
     }
 }
 
+// Universal Keyboard & Hardware Remote Listener (Mendengarkan Spasi, Media Key, & Tombol Volume S Pen)
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
@@ -524,11 +526,11 @@ function setupKeyboardShortcuts() {
             'MediaPlay',
             'MediaPause',
             'Unidentified'
-        ].includes(e.key);
+        ].includes(e.key) || e.keyCode === 179;
 
-        if (isPlayToggle || e.keyCode === 179) {
+        if (isPlayToggle) {
             e.preventDefault();
-            togglePlay();
+            togglePlay(); // Klik S Pen 1x: Jalan -> Klik 1x lagi: Pause
         }
         else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
             e.preventDefault(); 
@@ -671,7 +673,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('scriptTextarea').value = window.appState.scriptText;
     updateTextDisplays();
     setupKeyboardShortcuts();
-    setupMediaSessionHandlers(); // Mengaktifkan listener S Pen Bluetooth
+    setupMediaSessionHandlers();
     setupManualScrollHandlers();
     startAnimationLoop();
 });
