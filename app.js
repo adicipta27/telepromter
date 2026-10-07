@@ -26,7 +26,6 @@ Anda sekarang bisa menekan tombol S Pen (Samsung Note 10) untuk Mulai / Jeda Aut
 
 Layar ini juga sudah disempurnakan agar pergerakan scroll manual dan auto scroll tetap mulus tanpa terloncat.`,
     
-    // High Precision Scroll Targets (0.0 to 1.0)
     targetScrollPercent: 0,
     currentScrollPercent: 0,
     
@@ -45,6 +44,7 @@ let peer = null;
 let activeConnections = [];
 let hostConnection = null;
 let lastBroadcastTime = 0;
+let mobileControlsTimeout = null;
 
 function generate6CharRoomCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -57,6 +57,41 @@ function generate6CharRoomCode() {
 
 function formatRoomInput(input) {
     input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+}
+
+// Auto-hide control timer untuk Mode Display HP
+function resetMobileControlsTimer() {
+    const controls = document.getElementById('mobileOverlayControls');
+    if (!controls) return;
+
+    controls.classList.remove('opacity-0', 'pointer-events-none');
+    controls.classList.add('opacity-100', 'pointer-events-auto');
+
+    if (mobileControlsTimeout) {
+        clearTimeout(mobileControlsTimeout);
+    }
+
+    if (!window.appState.isController && window.appState.isPlaying) {
+        mobileControlsTimeout = setTimeout(() => {
+            controls.classList.remove('opacity-100', 'pointer-events-auto');
+            controls.classList.add('opacity-0', 'pointer-events-none');
+        }, 3000);
+    }
+}
+
+function handleDisplayScreenTap() {
+    if (window.appState.isController) return;
+    
+    const controls = document.getElementById('mobileOverlayControls');
+    if (!controls) return;
+
+    if (controls.classList.contains('opacity-0')) {
+        resetMobileControlsTimer();
+    } else {
+        controls.classList.remove('opacity-100', 'pointer-events-auto');
+        controls.classList.add('opacity-0', 'pointer-events-none');
+        if (mobileControlsTimeout) clearTimeout(mobileControlsTimeout);
+    }
 }
 
 // WebRTC Sync Initialization
@@ -108,7 +143,6 @@ function connectAsClient(hostPeerId) {
     });
 }
 
-// Send network state throttled (Max 20 times per second)
 function broadcastStateChange(force = false) {
     const now = Date.now();
     if (!force && (now - lastBroadcastTime < 50)) return;
@@ -159,6 +193,7 @@ function handleIncomingData(data) {
         applyMirrorStyles();
         applyFocusLineStyles();
         updatePlayIcons();
+        resetMobileControlsTimer();
     }
 }
 
@@ -174,7 +209,6 @@ function startAnimationLoop() {
             const maxScroll = activeContainer.scrollHeight - activeContainer.clientHeight;
 
             if (maxScroll > 0) {
-                // 1. Auto-scroll step if playing
                 if (window.appState.isPlaying) {
                     const speedDelta = (window.appState.speed * 0.4) / maxScroll;
                     window.appState.targetScrollPercent = Math.min(1.0, window.appState.targetScrollPercent + speedDelta);
@@ -186,7 +220,6 @@ function startAnimationLoop() {
                     broadcastStateChange();
                 }
 
-                // 2. Linear Interpolation (Lerp)
                 const lerpFactor = 0.2;
                 const diff = window.appState.targetScrollPercent - window.appState.currentScrollPercent;
                 
@@ -196,13 +229,11 @@ function startAnimationLoop() {
                     window.appState.currentScrollPercent = window.appState.targetScrollPercent;
                 }
 
-                // 3. Apply position
                 const targetPixels = window.appState.currentScrollPercent * maxScroll;
                 
                 if (pcContainer) pcContainer.scrollTop = targetPixels;
                 if (mobileContainer) mobileContainer.scrollTop = targetPixels;
 
-                // 4. Update UI Indicators
                 const displayPercent = Math.round(window.appState.currentScrollPercent * 100);
                 document.getElementById('scrollProgressPercent').innerText = displayPercent + '%';
                 document.getElementById('inputScrollProgress').value = Math.round(window.appState.currentScrollPercent * 1000);
@@ -214,7 +245,6 @@ function startAnimationLoop() {
     requestAnimationFrame(renderLoop);
 }
 
-// Manual Scroll Handlers
 function setupManualScrollHandlers() {
     const pcContainer = document.getElementById('promptContainer');
     const mobileContainer = document.getElementById('mobilePromptContainer');
@@ -239,11 +269,11 @@ function onManualSliderInput(val) {
     broadcastStateChange();
 }
 
-// Playback Control
 function togglePlay() {
     window.appState.isPlaying = !window.appState.isPlaying;
     updatePlayIcons();
     broadcastStateChange(true);
+    resetMobileControlsTimer();
 }
 
 function updatePlayIcons() {
@@ -297,7 +327,6 @@ function startCountdownAndPlay() {
     }, 1000);
 }
 
-// Settings Adjustments
 function updateSpeed(val) {
     window.appState.speed = parseInt(val);
     document.getElementById('speedValueDisplay').innerText = val + ' px/s';
@@ -413,7 +442,6 @@ function applyFocusLineStyles() {
     }
 }
 
-// Script Editor
 function onScriptInputChange(val) {
     window.appState.scriptText = val;
     updateTextDisplays();
@@ -443,7 +471,6 @@ function loadPresetScript(key) {
     showToast("Naskah contoh dimuat", "info");
 }
 
-// Navigation Mode Switch
 function switchViewMode(mode) {
     const controllerView = document.getElementById('controllerView');
     const displayView = document.getElementById('displayView');
@@ -462,16 +489,14 @@ function switchViewMode(mode) {
         displayView.classList.remove('hidden');
         btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
         btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
+        resetMobileControlsTimer();
     }
 }
 
-// KEYBOARD & SAMSUNG S PEN CONTROLS
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
-        // Jangan jalankan jika user sedang fokus mengetik naskah
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-        // Deteksi Tombol S Pen (Samsung Note 10 / Galaxy Tab) & Keyboard
         const isPlayToggle = [
             'Space',
             'MediaPlayPause',
@@ -490,7 +515,7 @@ function setupKeyboardShortcuts() {
 
         if (isPlayToggle || e.keyCode === 179) {
             e.preventDefault();
-            togglePlay(); // ON / OFF Auto-Scroll
+            togglePlay();
         }
         else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
             e.preventDefault(); 
@@ -506,7 +531,6 @@ function setupKeyboardShortcuts() {
     });
 }
 
-// Room Modals & QR Code
 function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); }
 function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); }
 
@@ -621,7 +645,6 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// App Init
 window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
