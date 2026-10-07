@@ -5,7 +5,8 @@ window.appState = {
     scriptText: `Selamat datang di TeleSync PRO!
 
 Tekan tombol S Pen Anda:
-- Klik 1x (Scroll Down/Up): Mulai / Pause Auto Scroll (Berfungsi penuh di PC & HP Mode Display)
+- Klik 1x: Mulai Auto Scroll
+- Klik 1x lagi: Pause / Jeda
 
 Layar ini sudah disesuaikan dengan posisi kontrol di kiri bawah dan tetap mulus tanpa terloncat.`,
     
@@ -228,17 +229,12 @@ function startAnimationLoop() {
     requestAnimationFrame(renderLoop);
 }
 
-// Handler Wheel / Scroll S Pen (Dukungan penuh untuk PC & HP Mode Display)
 function setupManualScrollHandlers() {
     const pcContainer = document.getElementById('promptContainer');
     const mobileContainer = document.getElementById('mobilePromptContainer');
 
     function handleWheel(e) {
         e.preventDefault();
-        
-        // Begitu S Pen diklik (mengirim sinyal scroll down/up), langsung Toggle Play/Pause
-        togglePlay();
-
         const container = e.currentTarget;
         const maxScroll = container.scrollHeight - container.clientHeight;
         if (maxScroll <= 0) return;
@@ -249,18 +245,7 @@ function setupManualScrollHandlers() {
     }
 
     if (pcContainer) pcContainer.addEventListener('wheel', handleWheel, { passive: false });
-    
-    if (mobileContainer) {
-        mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
-    }
-
-    // Listener global untuk menangkap event scroll S Pen di HP/Rig saat mode Display aktif
-    document.addEventListener('wheel', (e) => {
-        if (!window.appState.isController) {
-            e.preventDefault();
-            togglePlay();
-        }
-    }, { passive: false });
+    if (mobileContainer) mobileContainer.addEventListener('wheel', handleWheel, { passive: false });
 }
 
 function onManualSliderInput(val) {
@@ -491,7 +476,7 @@ function switchViewMode(mode) {
     }
 }
 
-// MediaSession API Handler
+// MediaSession API Handler untuk S Pen Bluetooth Play/Pause
 function setupMediaSessionHandlers() {
     if ('mediaSession' in navigator) {
         try {
@@ -522,7 +507,7 @@ function setupMediaSessionHandlers() {
     }
 }
 
-// Keyboard Shortcuts Listener
+// Universal Keyboard & Hardware Remote Listener (Mendengarkan Spasi, Media Key, & Tombol Volume S Pen)
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
@@ -545,7 +530,7 @@ function setupKeyboardShortcuts() {
 
         if (isPlayToggle) {
             e.preventDefault();
-            togglePlay();
+            togglePlay(); // Klik S Pen 1x: Jalan -> Klik 1x lagi: Pause
         }
         else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
             e.preventDefault(); 
