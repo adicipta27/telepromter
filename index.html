@@ -335,7 +335,7 @@
 
         </div>
 
-        <!-- DISPLAY MODE (MOBILE/HP) - Tombol Vertikal & Latar Belakang Transparan di Kiri Bawah -->
+        <!-- DISPLAY MODE (MOBILE/HP) - Tombol Vertikal Lebih Mini & Transparan di Kiri Bawah -->
         <div id="displayView" class="hidden absolute inset-0 bg-black z-30 flex flex-col overflow-hidden" onclick="handleDisplayScreenTap()">
             <div id="mobilePromptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none">
                 <div id="mobileFocusLineOverlay" class="focus-line-overlay top-1/3 h-20"></div>
@@ -346,17 +346,17 @@
                 </div>
             </div>
 
-            <!-- Floating Controls Vertikal & Semi-Transparan di Kiri Bawah -->
-            <div id="mobileOverlayControls" class="absolute bottom-6 left-6 z-40 bg-slate-950/40 backdrop-blur-md border border-white/10 px-3 py-3 rounded-2xl shadow-2xl flex flex-col items-center gap-3 transition-opacity duration-300 opacity-100">
-                <button onclick="event.stopPropagation(); togglePlay();" class="w-10 h-10 rounded-full bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center text-sm shadow-lg transition transform active:scale-95">
+            <!-- Floating Controls Vertikal Mini & Semi-Transparan -->
+            <div id="mobileOverlayControls" class="absolute bottom-4 left-4 z-40 bg-slate-950/30 backdrop-blur-sm border border-white/10 p-1.5 rounded-xl shadow-lg flex flex-col items-center gap-2 transition-opacity duration-300 opacity-100">
+                <button onclick="event.stopPropagation(); togglePlay();" class="w-7 h-7 rounded-full bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center text-[10px] shadow transition transform active:scale-95">
                     <i id="mobilePlayIcon" class="fa-solid fa-play"></i>
                 </button>
-                <div class="w-6 h-[1px] bg-white/20"></div>
-                <button onclick="event.stopPropagation(); toggleMirror('h');" class="text-slate-300 text-xs p-1.5 hover:text-white transition rounded-lg hover:bg-white/10" title="Mirror Horizontal">
+                <div class="w-4 h-[1px] bg-white/20"></div>
+                <button onclick="event.stopPropagation(); toggleMirror('h');" class="text-slate-300 text-[10px] p-1 hover:text-white transition rounded hover:bg-white/10" title="Mirror Horizontal">
                     <i class="fa-solid fa-arrows-left-right"></i>
                 </button>
-                <div class="w-6 h-[1px] bg-white/20"></div>
-                <button onclick="event.stopPropagation(); switchViewMode('controller');" class="text-slate-300 text-[10px] font-bold px-2.5 py-1 bg-black/40 hover:bg-white/20 rounded-lg border border-white/10 tracking-wider">
+                <div class="w-4 h-[1px] bg-white/20"></div>
+                <button onclick="event.stopPropagation(); switchViewMode('controller');" class="text-slate-300 text-[9px] font-bold px-1.5 py-0.5 bg-black/40 hover:bg-white/20 rounded border border-white/10 tracking-wider">
                     PC
                 </button>
             </div>
