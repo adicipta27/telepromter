@@ -1,21 +1,3 @@
-const presetScripts = {
-    speech: `PIDATO SAMBUTAN RESMI
-Assalamu'alaikum Warahmatullahi Wabarakatuh,
-Selamat pagi dan salam sejahtera untuk kita semua.
-
-Yang saya hormati jajaran direksi serta seluruh tim yang hadir pada pagi hari ini.
-Marilah kita panjatkan puji dan syukur karena dapat berkumpul dalam acara ini.
-
-Mari kita terus melangkah maju dengan semangat inovasi dan kolaborasi untuk mencapai target yang lebih besar!`,
-
-    tech: `REVIEW GADGET & TEKNOLOGI
-Halo semuanya, kembali lagi di channel kami!
-
-Hari ini kita kedatangan smartphone flagship terbaru yang punya kamera super jernih.
-
-Layarnya mengusung AMOLED 120Hz yang sangat responsif, cocok untuk bernavigasi harian maupun bermain game berat.`
-};
-
 // App State with Dual Targets for Smooth Lerp Motion
 window.appState = {
     roomId: '',
@@ -463,15 +445,6 @@ function updateTextDisplays() {
     document.getElementById('estTimeDisplay').innerText = `${minutes}m ${seconds}s`;
 }
 
-function loadPresetScript(key) {
-    if (!key || !presetScripts[key]) return;
-    const script = presetScripts[key];
-    document.getElementById('scriptTextarea').value = script;
-    onScriptInputChange(script);
-    showToast("Naskah contoh dimuat", "info");
-}
-
-// Navigasi Mode Serta Sembunyikan/Tampilkan Header Atas
 function switchViewMode(mode) {
     const controllerView = document.getElementById('controllerView');
     const displayView = document.getElementById('displayView');
@@ -483,14 +456,14 @@ function switchViewMode(mode) {
         window.appState.isController = true;
         controllerView.classList.remove('hidden');
         displayView.classList.add('hidden');
-        if (appHeader) appHeader.classList.remove('hidden'); // Munculkan header kembali di PC
+        if (appHeader) appHeader.classList.remove('hidden');
         btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
         btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
     } else {
         window.appState.isController = false;
         controllerView.classList.add('hidden');
         displayView.classList.remove('hidden');
-        if (appHeader) appHeader.classList.add('hidden'); // Sembunyikan header atas total di HP/Rig
+        if (appHeader) appHeader.classList.add('hidden');
         btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
         btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
         resetMobileControlsTimer();
