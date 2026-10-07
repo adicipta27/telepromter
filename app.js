@@ -471,9 +471,11 @@ function loadPresetScript(key) {
     showToast("Naskah contoh dimuat", "info");
 }
 
+// Navigasi Mode Serta Sembunyikan/Tampilkan Header Atas
 function switchViewMode(mode) {
     const controllerView = document.getElementById('controllerView');
     const displayView = document.getElementById('displayView');
+    const appHeader = document.getElementById('appHeader');
     const btnCtrl = document.getElementById('btnModeController');
     const btnDisp = document.getElementById('btnModeDisplay');
 
@@ -481,12 +483,14 @@ function switchViewMode(mode) {
         window.appState.isController = true;
         controllerView.classList.remove('hidden');
         displayView.classList.add('hidden');
+        if (appHeader) appHeader.classList.remove('hidden'); // Munculkan header kembali di PC
         btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
         btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
     } else {
         window.appState.isController = false;
         controllerView.classList.add('hidden');
         displayView.classList.remove('hidden');
+        if (appHeader) appHeader.classList.add('hidden'); // Sembunyikan header atas total di HP/Rig
         btnDisp.className = "px-3 py-1.5 rounded-lg font-semibold transition bg-brand-600 text-white shadow";
         btnCtrl.className = "px-3 py-1.5 rounded-lg font-semibold transition text-slate-400 hover:text-white";
         resetMobileControlsTimer();
