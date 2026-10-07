@@ -5,8 +5,7 @@ window.appState = {
     scriptText: `Selamat datang di TeleSync PRO!
 
 Tekan tombol S Pen Anda:
-- Klik 1x: Mulai Auto Scroll
-- Klik 1x lagi: Pause / Jeda
+- Klik 1x: Mulai / Pause Auto Scroll (via S Pen Scroll Down)
 
 Layar ini sudah disesuaikan dengan posisi kontrol di kiri bawah dan tetap mulus tanpa terloncat.`,
     
@@ -229,12 +228,17 @@ function startAnimationLoop() {
     requestAnimationFrame(renderLoop);
 }
 
+// Handler Wheel / Scroll S Pen (Single Press = Scroll Down -> Toggle Play/Pause)
 function setupManualScrollHandlers() {
     const pcContainer = document.getElementById('promptContainer');
     const mobileContainer = document.getElementById('mobilePromptContainer');
 
     function handleWheel(e) {
         e.preventDefault();
+        
+        // Sinyal scroll dari S Pen (Single Press / Double Press) akan memicu Toggle Play/Pause
+        togglePlay();
+
         const container = e.currentTarget;
         const maxScroll = container.scrollHeight - container.clientHeight;
         if (maxScroll <= 0) return;
@@ -476,7 +480,7 @@ function switchViewMode(mode) {
     }
 }
 
-// MediaSession API Handler untuk S Pen Bluetooth Play/Pause
+// MediaSession API Handler
 function setupMediaSessionHandlers() {
     if ('mediaSession' in navigator) {
         try {
@@ -507,7 +511,7 @@ function setupMediaSessionHandlers() {
     }
 }
 
-// Universal Keyboard & Hardware Remote Listener (Mendengarkan Spasi, Media Key, & Tombol Volume S Pen)
+// Keyboard Shortcuts Listener
 function setupKeyboardShortcuts() {
     window.addEventListener('keydown', (e) => {
         if (['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
@@ -530,7 +534,7 @@ function setupKeyboardShortcuts() {
 
         if (isPlayToggle) {
             e.preventDefault();
-            togglePlay(); // Klik S Pen 1x: Jalan -> Klik 1x lagi: Pause
+            togglePlay();
         }
         else if (e.code === 'ArrowUp' || e.code === 'PageUp') { 
             e.preventDefault(); 
