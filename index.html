@@ -90,8 +90,8 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
 
-    <!-- Header -->
-    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-4 lg:px-6 py-3 flex items-center justify-between">
+    <!-- Header (Diberi id="appHeader" agar otomatis sembunyi saat mode HP/Layar) -->
+    <header id="appHeader" class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-4 lg:px-6 py-3 flex items-center justify-between">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
                 <i class="fa-solid fa-display text-lg"></i>
@@ -191,7 +191,6 @@
 
                 <!-- Smooth Scroll Adjuster -->
                 <div class="space-y-4 bg-slate-950/40 border border-slate-800/80 p-4 rounded-2xl">
-                    <!-- Manual Scroll Slider -->
                     <div class="space-y-1.5">
                         <div class="flex justify-between items-center text-xs">
                             <label class="font-semibold text-slate-300 flex items-center gap-1.5">
@@ -203,7 +202,6 @@
                         <p class="text-[10px] text-slate-500">Bisa juga scroll mouse / geser layar di area preview.</p>
                     </div>
 
-                    <!-- Auto-scroll Speed -->
                     <div class="space-y-1.5 pt-2 border-t border-slate-800">
                         <div class="flex justify-between items-center text-xs">
                             <label class="font-semibold text-slate-300 flex items-center gap-1.5">
@@ -342,7 +340,7 @@
 
         </div>
 
-        <!-- DISPLAY MODE (MOBILE/HP) dengan Auto-Hide Menu agar aman dari kepencet -->
+        <!-- DISPLAY MODE (MOBILE/HP) -->
         <div id="displayView" class="hidden absolute inset-0 bg-black z-30 flex flex-col overflow-hidden" onclick="handleDisplayScreenTap()">
             <div id="mobilePromptContainer" class="flex-1 overflow-y-auto relative no-scrollbar theme-dark select-none">
                 <div id="mobileFocusLineOverlay" class="focus-line-overlay top-1/3 h-20"></div>
